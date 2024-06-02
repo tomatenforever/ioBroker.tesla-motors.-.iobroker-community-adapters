@@ -808,10 +808,11 @@ class Teslamotors extends utils.Adapter {
       'Content-Type': 'application/json; charset=utf-8',
       Accept: '*/*',
       Authorization: 'Bearer ' + this.session.access_token,
+      'x-tesla-command-protocol': '2023-10-09' // Hinzufügen des Tesla Command Protokolls
     };
   
     const apiUrlBase = this.config.useNewApi
-      ? `${this.config.teslaApiProxyUrl}/vehicles/${this.id2vin[id]}`
+      ? `${this.config.teslaApiProxyUrl}/api/1/vehicles/${this.id2vin[id]}`
       : `https://owner-api.teslamotors.com/api/1/vehicles/${id}`;
   
     let url = `${apiUrlBase}/command/${command}`;
@@ -916,6 +917,7 @@ class Teslamotors extends utils.Adapter {
       url: url,
       headers: headers,
       data: data,
+      timeout: 5000 // Timeout auf 5 Sekunden setzen
     })
       .then((res) => {
         this.log.info(JSON.stringify(res.data));
@@ -946,7 +948,7 @@ class Teslamotors extends utils.Adapter {
         throw error;
       });
   }
-    
+  
   async connectToWS(vehicleId, id) {
     if (this.ws) {
       this.ws.close();
