@@ -197,7 +197,13 @@
     "locationInterval": 60,
     "intervalDrive": null,
     "excludeDeviceList": "",
-    "excludeElementList": ""
+    "excludeElementList": "",
+    "clientId": "",
+    "clientSecret": "",
+    "refreshToken": "",
+    "accessToken": "",
+    "vehicleId": "",
+    "useNewApi": false
   },
   "objects": [],
   "instanceObjects": [
