@@ -811,13 +811,13 @@ class Teslamotors extends utils.Adapter {
     };
   
     const apiUrlBase = this.config.useNewApi
-      ? this.config.teslaApiProxyUrl + '/api/1/vehicles/' + this.id2vin[id]
-      : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id;
+      ? `${this.config.teslaApiProxyUrl}/vehicles/${this.id2vin[id]}`
+      : `https://owner-api.teslamotors.com/api/1/vehicles/${id}`;
   
-    let url = apiUrlBase + '/command/' + command;
+    let url = `${apiUrlBase}/command/${command}`;
   
     if (command === 'wake_up') {
-      url = apiUrlBase + '/wake_up';
+      url = `${apiUrlBase}/wake_up`;
     }
     if (nonVehicle) {
       url = apiUrlBase.replace('/vehicles/', '/energy_sites/') + '/' + command;
@@ -847,7 +847,7 @@ class Teslamotors extends utils.Adapter {
     const trunkArray = ['actuate_trunk'];
     const plainArray = ['set_scheduled_charging', 'set_scheduled_departure'];
     let data = {};
-    
+  
     if (passwordArray.includes(command)) {
       data['password'] = this.config.password;
     }
@@ -946,7 +946,7 @@ class Teslamotors extends utils.Adapter {
         throw error;
       });
   }
-  
+    
   async connectToWS(vehicleId, id) {
     if (this.ws) {
       this.ws.close();
