@@ -10,6 +10,7 @@ const qs = require('qs');
 const WebSocket = require('ws');
 const crypto = require('crypto');
 const Json2iob = require('./lib/json2iob');
+const https = require('https');
 
 class Teslamotors extends utils.Adapter {
   constructor(options) {
@@ -804,26 +805,31 @@ class Teslamotors extends utils.Adapter {
   }
 
   async sendCommand(id, command, action, value, nonVehicle) {
+    const httpsAgent = new https.Agent({
+      cert: this.config.fullchainPem,
+      key: this.config.privkeyPem,
+    });
+
     const headers = {
       'Content-Type': 'application/json; charset=utf-8',
       Accept: '*/*',
       Authorization: 'Bearer ' + this.session.access_token,
-      'x-tesla-command-protocol': '2023-10-09' // Hinzufügen des Tesla Command Protokolls
+      'x-tesla-command-protocol': '2023-10-09'
     };
-  
+
     const apiUrlBase = this.config.useNewApi
       ? `${this.config.teslaApiProxyUrl}/api/1/vehicles/${this.id2vin[id]}`
       : `https://owner-api.teslamotors.com/api/1/vehicles/${id}`;
-  
+
     let url = `${apiUrlBase}/command/${command}`;
-  
+
     if (command === 'wake_up') {
       url = `${apiUrlBase}/wake_up`;
     }
     if (nonVehicle) {
       url = apiUrlBase.replace('/vehicles/', '/energy_sites/') + '/' + command;
     }
-  
+
     const passwordArray = ['remote_start_drive'];
     const latlonArray = ['trigger_homelink', 'window_control'];
     const onArray = [
@@ -848,7 +854,7 @@ class Teslamotors extends utils.Adapter {
     const trunkArray = ['actuate_trunk'];
     const plainArray = ['set_scheduled_charging', 'set_scheduled_departure'];
     let data = {};
-  
+
     if (passwordArray.includes(command)) {
       data['password'] = this.config.password;
     }
@@ -902,7 +908,7 @@ class Teslamotors extends utils.Adapter {
         timestamp_ms: (Date.now() / 1000).toFixed(0),
       };
     }
-  
+
     if (plainArray.includes(command)) {
       try {
         data = JSON.parse(value);
@@ -912,12 +918,13 @@ class Teslamotors extends utils.Adapter {
     }
     this.log.debug(url);
     this.log.debug(JSON.stringify(data));
-    return await this.requestClient({
+    return await axios({
       method: 'post',
       url: url,
       headers: headers,
       data: data,
-      timeout: 5000 // Timeout auf 5 Sekunden setzen
+      timeout: 5000, // Timeout auf 5 Sekunden setzen
+      httpsAgent: httpsAgent,
     })
       .then((res) => {
         this.log.info(JSON.stringify(res.data));
@@ -938,17 +945,17 @@ class Teslamotors extends utils.Adapter {
             this.log.info('Start refresh token');
             this.refreshToken();
           }, 1000 * 30);
-  
+
           return;
         }
-  
+
         this.log.error(url);
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
         throw error;
       });
   }
-  
+
   async connectToWS(vehicleId, id) {
     if (this.ws) {
       this.ws.close();

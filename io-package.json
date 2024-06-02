@@ -203,7 +203,9 @@
     "refreshToken": "",
     "accessToken": "",
     "vehicleId": "",
-    "useNewApi": false
+    "useNewApi": false,
+    "fullchainPem": "",              
+    "privkeyPem": ""             
   },
   "objects": [],
   "instanceObjects": [
