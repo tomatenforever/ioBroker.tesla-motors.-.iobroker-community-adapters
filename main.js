@@ -63,6 +63,17 @@ class Teslamotors extends utils.Adapter {
         obj.native.reset = false;
         obj.native.captcha = '';
         obj.native.codeUrl = '';
+        obj.native.partnerAuthToken = '';
+        obj.native.refreshToken = '';
+        obj.native.accessToken = '';
+        obj.native.vehicleId = '';
+        obj.native.id = '';
+        obj.native.clientId = '';
+        obj.native.clientSecret = '';
+        obj.native.domain = '';
+        obj.native.region = '';
+        obj.native.redirectUri = '';
+        obj.native.teslaApiProxyUrl = '';
         await this.setForeignObjectAsync(this.adapterConfig, obj);
         this.log.info('Login Token resetted');
         this.terminate();
@@ -94,9 +105,12 @@ class Teslamotors extends utils.Adapter {
       'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
       'accept-language': 'de-de',
     };
-    if (!this.session.access_token) {
+    if (!this.config.useNewApi && !this.session.access_token) {
       this.log.info('Initial login');
       await this.login();
+    }
+    if (this.config.useNewApi) {
+      this.session.access_token = this.config.accessToken; // Use the access token from user input
     }
     if (this.session.access_token) {
       this.log.info('Receive device list');
@@ -113,12 +127,15 @@ class Teslamotors extends utils.Adapter {
       } else {
         this.log.info('Location interval is less than 10s. Skip location update');
       }
-      const intervalTime = this.session.expires_in ? (this.session.expires_in - 200) * 1000 : 3000 * 1000;
-      this.refreshTokenInterval = setInterval(() => {
-        this.refreshToken();
-      }, intervalTime);
+      if (!this.config.useNewApi) {
+        const intervalTime = this.session.expires_in ? (this.session.expires_in - 200) * 1000 : 3000 * 1000;
+        this.refreshTokenInterval = setInterval(() => {
+          this.refreshToken();
+        }, intervalTime);
+      }
     }
   }
+
   async login() {
     if (!this.config.codeUrl) {
       this.log.info('Waiting for codeURL please visit instance settings and copy url after login');
@@ -178,15 +195,27 @@ class Teslamotors extends utils.Adapter {
   }
 
   async getDeviceList() {
-    const headers = {
-      'Content-Type': 'application/json',
-      Accept: '*/*',
-      'User-Agent': 'ioBroker 1.1.0',
-      Authorization: 'Bearer ' + this.session.access_token,
-    };
+    const headers = this.config.useNewApi
+      ? {
+          'Content-Type': 'application/json',
+          Accept: '*/*',
+          'User-Agent': 'ioBroker 1.1.0',
+          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
+        }
+      : {
+          'Content-Type': 'application/json',
+          Accept: '*/*',
+          'User-Agent': 'ioBroker 1.1.0',
+          Authorization: 'Bearer ' + this.session.access_token,
+        };
+
+    const apiUrl = this.config.useNewApi
+      ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles'
+      : 'https://owner-api.teslamotors.com/api/1/products?orders=1';
+
     await this.requestClient({
       method: 'get',
-      url: 'https://owner-api.teslamotors.com/api/1/products?orders=1',
+      url: apiUrl,
       headers: headers,
     })
       .then(async (res) => {
@@ -357,11 +386,14 @@ class Teslamotors extends utils.Adapter {
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
   }
+
   async updateDevices(forceUpdate, location = false) {
-    let vehicleStatusArray = [
+    const vehicleStatusArray = [
       {
         path: '',
-        url: 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/vehicle_data',
+        url: this.config.useNewApi
+          ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/{id}/vehicle_data'
+          : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/vehicle_data',
       },
       {
         path: '.charge_history',
@@ -373,7 +405,9 @@ class Teslamotors extends utils.Adapter {
       vehicleStatusArray = [
         {
           path: '',
-          url: 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/vehicle_data?endpoints=location_data',
+          url: this.config.useNewApi
+            ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/{id}/vehicle_data?endpoints=location_data'
+            : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/vehicle_data?endpoints=location_data',
         },
       ];
     }
@@ -430,13 +464,19 @@ class Teslamotors extends utils.Adapter {
           this.getDate(),
       },
     ];
-    const headers = {
-      'Content-Type': 'application/json; charset=utf-8',
-      Accept: '*/*',
-      'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-      'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-      Authorization: 'Bearer ' + this.session.access_token,
-    };
+    const headers = this.config.useNewApi
+      ? {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: '*/*',
+          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
+        }
+      : {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: '*/*',
+          'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
+          'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
+          Authorization: 'Bearer ' + this.session.access_token,
+        };
 
     this.idArray.forEach(async (product) => {
       //check state
@@ -656,16 +696,27 @@ class Teslamotors extends utils.Adapter {
     });
   }
   async updateDrive(id) {
-    const headers = {
-      'Content-Type': 'application/json; charset=utf-8',
-      Accept: '*/*',
-      'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-      'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-      Authorization: 'Bearer ' + this.session.access_token,
-    };
+    const headers = this.config.useNewApi
+      ? {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: '*/*',
+          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
+        }
+      : {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: '*/*',
+          'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
+          'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
+          Authorization: 'Bearer ' + this.session.access_token,
+        };
+
+    const apiUrl = this.config.useNewApi
+      ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state'
+      : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state';
+
     await this.requestClient({
       method: 'get',
-      url: 'https://owner-api.teslamotors.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state',
+      url: apiUrl,
       headers: headers,
     })
       .then((res) => {
@@ -693,16 +744,27 @@ class Teslamotors extends utils.Adapter {
       });
   }
   async checkState(id) {
-    const headers = {
-      'Content-Type': 'application/json; charset=utf-8',
-      Accept: '*/*',
-      'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-      'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-      Authorization: 'Bearer ' + this.session.access_token,
-    };
+    const headers = this.config.useNewApi
+      ? {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: '*/*',
+          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
+        }
+      : {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: '*/*',
+          'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
+          'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
+          Authorization: 'Bearer ' + this.session.access_token,
+        };
+
+    const apiUrl = this.config.useNewApi
+      ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id
+      : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id;
+
     return await this.requestClient({
       method: 'get',
-      url: 'https://owner-api.teslamotors.com/api/1/vehicles/' + id,
+      url: apiUrl,
       headers: headers,
     })
       .then((res) => {
@@ -729,18 +791,36 @@ class Teslamotors extends utils.Adapter {
   }
 
   async refreshToken(firstStart) {
+    const apiUrl = this.config.useNewApi ? 'https://auth.tesla.com/oauth2/v3/token' : 'https://auth.tesla.com/oauth2/v3/token';
+    const data = this.config.useNewApi
+      ? qs.stringify({
+          grant_type: 'refresh_token',
+          client_id: this.config.clientId,
+          client_secret: this.config.clientSecret,
+          refresh_token: this.config.refreshToken,
+        })
+      : 'grant_type=refresh_token&client_id=ownerapi&scope=openid email offline_access&refresh_token=' +
+        this.session.refresh_token;
+
+    const headers = this.config.useNewApi
+      ? { 'Content-Type': 'application/x-www-form-urlencoded' }
+      : this.headers;
+
     await this.requestClient({
       method: 'post',
-      url: 'https://auth.tesla.com/oauth2/v3/token',
-      headers: this.headers,
-      data:
-        'grant_type=refresh_token&client_id=ownerapi&scope=openid email offline_access&refresh_token=' +
-        this.session.refresh_token,
+      url: apiUrl,
+      headers: headers,
+      data: data,
     })
       .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
-        this.session.access_token = res.data.access_token;
-        this.session.expires_in = res.data.expires_in;
+        if (this.config.useNewApi) {
+          this.config.accessToken = res.data.access_token;
+          this.config.refreshToken = res.data.refresh_token;
+        } else {
+          this.session.access_token = res.data.access_token;
+          this.session.expires_in = res.data.expires_in;
+        }
 
         this.setState('info.connection', true, true);
         return res.data;
@@ -755,7 +835,9 @@ class Teslamotors extends utils.Adapter {
         }
         //received a real http error
         if (error.response && error.response.status >= 400 && error.response.status < 500) {
-          this.session = {};
+          if (!this.config.useNewApi) {
+            this.session = {};
+          }
           error.response && this.log.error(JSON.stringify(error.response.data));
           this.log.error('Start relogin in 1min');
           this.reLoginTimeout = setTimeout(() => {
@@ -818,20 +900,31 @@ class Teslamotors extends utils.Adapter {
     return true;
   }
   async sendCommand(id, command, action, value, nonVehicle) {
-    const headers = {
-      'Content-Type': 'application/json; charset=utf-8',
-      Accept: '*/*',
-      'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-      'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-      Authorization: 'Bearer ' + this.session.access_token,
-    };
-    let url = 'https://owner-api.teslamotors.com/api/1/vehicles/' + id + '/command/' + command;
+    const headers = this.config.useNewApi
+      ? {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: '*/*',
+          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
+        }
+      : {
+          'Content-Type': 'application/json; charset=utf-8',
+          Accept: '*/*',
+          'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
+          'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
+          Authorization: 'Bearer ' + this.session.access_token,
+        };
+
+    const apiUrlBase = this.config.useNewApi
+      ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id
+      : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id;
+
+    let url = apiUrlBase + '/command/' + command;
 
     if (command === 'wake_up') {
-      url = 'https://owner-api.teslamotors.com/api/1/vehicles/' + id + '/wake_up';
+      url = apiUrlBase + '/wake_up';
     }
     if (nonVehicle) {
-      url = 'https://owner-api.teslamotors.com/api/1/energy_sites/' + id + '/' + command;
+      url = apiUrlBase.replace('/vehicles/', '/energy_sites/') + '/' + command;
     }
     const passwordArray = ['remote_start_drive'];
     const latlonArray = ['trigger_homelink', 'window_control'];
