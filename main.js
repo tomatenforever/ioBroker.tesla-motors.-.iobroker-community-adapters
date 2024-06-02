@@ -4,21 +4,14 @@
  * Created with @iobroker/create-adapter v1.34.1
  */
 
-// The adapter-core module gives you access to the core ioBroker functions
-// you need to create an adapter
 const utils = require('@iobroker/adapter-core');
 const axios = require('axios').default;
 const qs = require('qs');
 const WebSocket = require('ws');
 const crypto = require('crypto');
 const Json2iob = require('./lib/json2iob');
-// const axiosCookieJarSupport = require("axios-cookiejar-support").default;
-// const tough = require("tough-cookie");
 
 class Teslamotors extends utils.Adapter {
-  /**
-   * @param {Partial<utils.AdapterOptions>} [options={}]
-   */
   constructor(options) {
     super({
       ...options,
@@ -41,13 +34,7 @@ class Teslamotors extends utils.Adapter {
     this.requestClient = axios.create();
   }
 
-  /**
-   * Is called when databases are connected and adapter received configuration.
-   */
   async onReady() {
-    // Initialize your adapter here
-
-    // Reset the connection indicator during startup
     this.setState('info.connection', false, true);
     if (this.config.intervalNormal < 1) {
       this.log.info('Set interval to minimum 1');
@@ -80,13 +67,6 @@ class Teslamotors extends utils.Adapter {
       }
     }
 
-    // axiosCookieJarSupport(axios);
-    // this.cookieJar = new tough.CookieJar();
-
-    // if (obj && obj.native.cookies) {
-    //   this.cookieJar = tough.CookieJar.fromJSON(obj.native.cookies);
-    // }
-
     if (obj && obj.native.session && obj.native.session.refresh_token) {
       this.session = obj.native.session;
       this.log.info('Session loaded');
@@ -110,7 +90,7 @@ class Teslamotors extends utils.Adapter {
       await this.login();
     }
     if (this.config.useNewApi) {
-      this.session.access_token = this.config.accessToken; // Use the access token from user input
+      this.session.access_token = this.config.accessToken;
     }
     if (this.session.access_token) {
       this.log.info('Receive device list');
@@ -141,8 +121,7 @@ class Teslamotors extends utils.Adapter {
       this.log.info('Waiting for codeURL please visit instance settings and copy url after login');
       return;
     }
-    //
-    // const codeChallenge = 'Tb-FGN3adrpojN8dmKySlVfBPdg-rA-voNN_3lftZVM';
+
     const code_verifier = '82326a2311262e580d179dc5023f3a7fd9bc3c9e0049f83138596b66c34fcdc7';
     let code = '';
     try {
@@ -195,19 +174,12 @@ class Teslamotors extends utils.Adapter {
   }
 
   async getDeviceList() {
-    const headers = this.config.useNewApi
-      ? {
-          'Content-Type': 'application/json',
-          Accept: '*/*',
-          'User-Agent': 'ioBroker 1.1.0',
-          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
-        }
-      : {
-          'Content-Type': 'application/json',
-          Accept: '*/*',
-          'User-Agent': 'ioBroker 1.1.0',
-          Authorization: 'Bearer ' + this.session.access_token,
-        };
+    const headers = {
+      'Content-Type': 'application/json',
+      Accept: '*/*',
+      'User-Agent': 'ioBroker 1.1.0',
+      Authorization: 'Bearer ' + this.session.access_token,
+    };
 
     const apiUrl = this.config.useNewApi
       ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles'
@@ -350,14 +322,14 @@ class Teslamotors extends utils.Adapter {
               this.setState(
                 id + '.remote.' + remote.command,
                 `{
-                                "departure_time": 375,
-                                "preconditioning_weekdays_only": false,
-                                "enable": true,
-                                "off_peak_charging_enabled": true,
-                                "preconditioning_enabled": false,
-                                "end_off_peak_time": 420,
-                                "off_peak_charging_weekdays_only": true
-                            }`,
+                  "departure_time": 375,
+                  "preconditioning_weekdays_only": false,
+                  "enable": true,
+                  "off_peak_charging_enabled": true,
+                  "preconditioning_enabled": false,
+                  "end_off_peak_time": 420,
+                  "off_peak_charging_weekdays_only": true
+                }`,
                 true,
               );
             }
@@ -365,9 +337,9 @@ class Teslamotors extends utils.Adapter {
               this.setState(
                 id + '.remote.' + remote.command,
                 `{
-                                    "time": 0,
-                                    "enable": true
-                                }`,
+                  "time": 0,
+                  "enable": true
+                }`,
                 true,
               );
             }
@@ -388,7 +360,7 @@ class Teslamotors extends utils.Adapter {
   }
 
   async updateDevices(forceUpdate, location = false) {
-    const vehicleStatusArray = [
+    let vehicleStatusArray = [
       {
         path: '',
         url: this.config.useNewApi
@@ -412,74 +384,27 @@ class Teslamotors extends utils.Adapter {
       ];
     }
     const powerwallArray = [
-      // { path: '', url: 'https://owner-api.teslamotors.com/api/1/powerwalls/{id}/status' },
-      // { path: ".powerhistory", url: "https://owner-api.teslamotors.com/api/1/powerwalls/{id}/powerhistory" },
-      // { path: ".energyhistory", url: "https://owner-api.teslamotors.com/api/1/powerwalls/{id}/energyhistory" },
       { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_status' },
       { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_info' },
-      {
-        path: '.live_status',
-        url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status',
-      },
-      {
-        path: '.backup_history',
-        url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/history?kind=backup',
-      },
-      {
-        path: '.energy_history',
-        url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&period=day&time_zone=Europe%2FBerlin',
-      },
-      {
-        path: '.self_consumption_history',
-        url:
-          'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=day&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&time_zone=Europe%2FBerlin&end_date=' +
-          this.getDate(),
-      },
-      {
-        path: '.self_consumption_history_lifetime',
-        url:
-          'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=lifetime&time_zone=Europe%2FBerlin&end_date=' +
-          this.getDate(),
-      },
-      {
-        path: '.energy_history_lifetime',
-        url:
-          'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&time_zone=Europe/Berlin&period=lifetime&end_date=' +
-          this.getDate(),
-      },
-      // { path: ".historyEnergy", url: "https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/history?kind=energy&period=day" },
-      // { path: ".historyPower", url: "https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/history?kind=power&period=day" },
+      { path: '.live_status', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status' },
+      { path: '.backup_history', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/history?kind=backup' },
+      { path: '.energy_history', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&period=day&time_zone=Europe%2FBerlin' },
+      { path: '.self_consumption_history', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=day&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&time_zone=Europe%2FBerlin&end_date=${this.getDate()}` },
+      { path: '.self_consumption_history_lifetime', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=lifetime&time_zone=Europe%2FBerlin&end_date=${this.getDate()}` },
+      { path: '.energy_history_lifetime', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&time_zone=Europe/Berlin&period=lifetime&end_date=${this.getDate()}` },
     ];
     const wallboxArray = [
       { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_info' },
-
-      {
-        path: '.live_status',
-        url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status',
-      },
-      {
-        path: '.telemetry_history',
-        url:
-          'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/telemetry_history?period=month&time_zone=Europe%2FBerlin&kind=charge&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&end_date=' +
-          this.getDate(),
-      },
+      { path: '.live_status', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status' },
+      { path: '.telemetry_history', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/telemetry_history?period=month&time_zone=Europe%2FBerlin&kind=charge&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&end_date=${this.getDate()}` },
     ];
-    const headers = this.config.useNewApi
-      ? {
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: '*/*',
-          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
-        }
-      : {
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: '*/*',
-          'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-          'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-          Authorization: 'Bearer ' + this.session.access_token,
-        };
+    const headers = {
+      'Content-Type': 'application/json; charset=utf-8',
+      Accept: '*/*',
+      Authorization: 'Bearer ' + this.session.access_token,
+    };
 
     this.idArray.forEach(async (product) => {
-      //check state
       const id = product.id;
       let currentArray;
       const energy_site_id = product.energy_site_id;
@@ -510,7 +435,6 @@ class Teslamotors extends utils.Adapter {
               this.ws.close();
             }
           }
-          //wait 15min
           if (Date.now() - this.sleepTimes[id] >= 900000) {
             this.log.debug(id + ' wait for sleep was not successful');
             this.sleepTimes[id] = null;
@@ -525,7 +449,6 @@ class Teslamotors extends utils.Adapter {
             let errorButNotTimeout = false;
 
             const vehicleState = await this.sendCommand(id, 'wake_up').catch((error) => {
-              //timeout and reset connection
               if (error.response && error.response.status !== 408 && error.response.status !== 503) {
                 errorButNotTimeout = true;
               }
@@ -603,7 +526,6 @@ class Teslamotors extends utils.Adapter {
             if (element.path.includes('lifetime')) {
               for (const serie of data.time_series) {
                 if (!data.total) {
-                  //clone object
                   data.total = JSON.parse(JSON.stringify(serie));
                 } else {
                   for (const key in serie) {
@@ -617,7 +539,6 @@ class Teslamotors extends utils.Adapter {
               }
             }
             if (element.path.includes('energy_history')) {
-              //sum up all values to total for each day
               const totals = {};
               for (const serie of data.time_series) {
                 let date = serie.timestamp.split('T')[0];
@@ -695,20 +616,13 @@ class Teslamotors extends utils.Adapter {
       }
     });
   }
+
   async updateDrive(id) {
-    const headers = this.config.useNewApi
-      ? {
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: '*/*',
-          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
-        }
-      : {
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: '*/*',
-          'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-          'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-          Authorization: 'Bearer ' + this.session.access_token,
-        };
+    const headers = {
+      'Content-Type': 'application/json; charset=utf-8',
+      Accept: '*/*',
+      Authorization: 'Bearer ' + this.session.access_token,
+    };
 
     const apiUrl = this.config.useNewApi
       ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state'
@@ -743,20 +657,13 @@ class Teslamotors extends utils.Adapter {
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
   }
+
   async checkState(id) {
-    const headers = this.config.useNewApi
-      ? {
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: '*/*',
-          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
-        }
-      : {
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: '*/*',
-          'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-          'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-          Authorization: 'Bearer ' + this.session.access_token,
-        };
+    const headers = {
+      'Content-Type': 'application/json; charset=utf-8',
+      Accept: '*/*',
+      Authorization: 'Bearer ' + this.session.access_token,
+    };
 
     const apiUrl = this.config.useNewApi
       ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id
@@ -833,7 +740,6 @@ class Teslamotors extends utils.Adapter {
           this.log.error('No connection to Tesla server please check your connection');
           return;
         }
-        //received a real http error
         if (error.response && error.response.status >= 400 && error.response.status < 500) {
           if (!this.config.useNewApi) {
             this.session = {};
@@ -844,7 +750,6 @@ class Teslamotors extends utils.Adapter {
             this.login();
           }, 1000 * 60 * 1);
         } else if (firstStart) {
-          //connection problems
           this.log.error('No connection to tesla server restart adapter in 1min');
           this.reLoginTimeout = setTimeout(() => {
             this.restart();
@@ -881,12 +786,10 @@ class Teslamotors extends utils.Adapter {
     for (const stateId of checkStates) {
       const curState = await this.getStateAsync(vin + stateId);
       this.log.debug('Check state: ' + vin + stateId);
-      //shift state switches between P and null so we ignore it
       if (stateId === '.drive_state.shift_state' && curState && (curState.val === 'P' || curState.val === null)) {
         continue;
       }
 
-      //laste update not older than 30min and last change not older then 30min
       if (curState && (curState.ts <= Date.now() - 1800000 || curState.ts - curState.lc <= 1800000)) {
         this.log.debug(
           `Skip sleep waiting because state ${vin + stateId} changed in last 30min TS: ${new Date(
@@ -899,20 +802,13 @@ class Teslamotors extends utils.Adapter {
     this.log.debug('Since 30 min no changes receiving. Start waiting for sleep');
     return true;
   }
+
   async sendCommand(id, command, action, value, nonVehicle) {
-    const headers = this.config.useNewApi
-      ? {
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: '*/*',
-          Authorization: 'Bearer ' + this.session.access_token, // Use the access token from session
-        }
-      : {
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: '*/*',
-          'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-          'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-          Authorization: 'Bearer ' + this.session.access_token,
-        };
+    const headers = {
+      'Content-Type': 'application/json; charset=utf-8',
+      Accept: '*/*',
+      Authorization: 'Bearer ' + this.session.access_token,
+    };
 
     const apiUrlBase = this.config.useNewApi
       ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id
@@ -1103,6 +999,7 @@ class Teslamotors extends utils.Adapter {
       this.log.error('websocket error: ' + err);
     });
   }
+
   getCodeChallenge() {
     let hash = '';
     let result = '';
@@ -1114,6 +1011,7 @@ class Teslamotors extends utils.Adapter {
 
     return [result, hash];
   }
+
   randomString(length) {
     let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -1123,6 +1021,7 @@ class Teslamotors extends utils.Adapter {
     }
     return result;
   }
+
   extractHidden(body) {
     const returnObject = {};
     let matches;
@@ -1139,23 +1038,26 @@ class Teslamotors extends utils.Adapter {
     }
     return returnObject;
   }
+
   matchAll(re, str) {
     let match;
     const matches = [];
 
     while ((match = re.exec(str))) {
-      // add all matched groups
       matches.push(match);
     }
 
     return matches;
   }
+
   sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+
   getDate() {
     return new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString();
   }
+
   async cleanOldObjects() {
     const driveState = await this.getObjectAsync('driveState');
     if (driveState) {
@@ -1167,10 +1069,7 @@ class Teslamotors extends utils.Adapter {
       await this.delObject('command', { recursive: true });
     }
   }
-  /**
-   * Is called when adapter shuts down - callback has to be called under any circumstances!
-   * @param {() => void} callback
-   */
+
   async onUnload(callback) {
     try {
       this.setState('info.connection', false, true);
@@ -1198,12 +1097,6 @@ class Teslamotors extends utils.Adapter {
       callback();
     }
   }
-
-  /**
-   * Is called if a subscribed state changes
-   * @param {string} id
-   * @param {ioBroker.State | null | undefined} state
-   */
 
   async onStateChange(id, state) {
     if (state) {
@@ -1295,12 +1188,7 @@ class Teslamotors extends utils.Adapter {
 }
 
 if (require.main !== module) {
-  // Export the constructor in compact mode
-  /**
-   * @param {Partial<utils.AdapterOptions>} [options={}]
-   */
   module.exports = (options) => new Teslamotors(options);
 } else {
-  // otherwise start the instance directly
   new Teslamotors();
 }
