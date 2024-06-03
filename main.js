@@ -359,7 +359,6 @@ class Teslamotors extends utils.Adapter {
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
   }
-
   async updateDevices(forceUpdate, location = false) {
     let vehicleStatusArray = [
       {
@@ -370,10 +369,13 @@ class Teslamotors extends utils.Adapter {
       },
       {
         path: '.charge_history',
-        url: 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/charge_history?vehicle_trim=5&client_time_zone=Europe/Berlin&client_country=DE&currency_code=EUR&state=&time_zone=Europe/Vatican&state_label=&vehicle_model=2&language=de&country_label=Deutschland&country=DE',
-        method: 'POST',
+        url: this.config.useNewApi
+          ? 'https://fleet-api.prd.na.vn.cloud.tesla.com/api/1/dx/charging/history'
+          : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/charge_history?vehicle_trim=5&client_time_zone=Europe/Berlin&client_country=DE&currency_code=EUR&state=&time_zone=Europe/Vatican&state_label=&vehicle_model=2&language=de&country_label=Deutschland&country=DE',
+        method: this.config.useNewApi ? 'GET' : 'POST',
       },
     ];
+  
     if (location) {
       vehicleStatusArray = [
         {
@@ -384,6 +386,7 @@ class Teslamotors extends utils.Adapter {
         },
       ];
     }
+  
     const powerwallArray = [
       { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_status' },
       { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_info' },
@@ -394,17 +397,19 @@ class Teslamotors extends utils.Adapter {
       { path: '.self_consumption_history_lifetime', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=lifetime&time_zone=Europe%2FBerlin&end_date=${this.getDate()}` },
       { path: '.energy_history_lifetime', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&time_zone=Europe/Berlin&period=lifetime&end_date=${this.getDate()}` },
     ];
+  
     const wallboxArray = [
       { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_info' },
       { path: '.live_status', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status' },
       { path: '.telemetry_history', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/telemetry_history?period=month&time_zone=Europe%2FBerlin&kind=charge&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&end_date=${this.getDate()}` },
     ];
+  
     const headers = {
       'Content-Type': 'application/json; charset=utf-8',
       Accept: '*/*',
       Authorization: 'Bearer ' + this.session.access_token,
     };
-
+  
     this.idArray.forEach(async (product) => {
       const id = product.id;
       let currentArray;
@@ -428,7 +433,7 @@ class Teslamotors extends utils.Adapter {
           }
         }
         this.lastStates[id] = state;
-
+  
         if (waitForSleep && !this.config.wakeup) {
           if (!this.sleepTimes[id]) {
             this.sleepTimes[id] = Date.now();
@@ -444,11 +449,11 @@ class Teslamotors extends utils.Adapter {
             return;
           }
         }
-
+  
         if (this.config.wakeup && state !== 'online') {
           while (state !== 'online') {
             let errorButNotTimeout = false;
-
+  
             const vehicleState = await this.sendCommand(id, 'wake_up').catch((error) => {
               if (error.response && error.response.status !== 408 && error.response.status !== 503) {
                 errorButNotTimeout = true;
@@ -462,7 +467,7 @@ class Teslamotors extends utils.Adapter {
           }
         }
         currentArray = vehicleStatusArray;
-
+  
         if (this.config.streaming) {
           this.connectToWS(product.vehicle_id, product.id);
         }
@@ -481,7 +486,7 @@ class Teslamotors extends utils.Adapter {
         let url = element.url.replace('{id}', id);
         url = url.replace('{energy_site_id}', energy_site_id);
         this.log.debug(url);
-
+  
         if (element.path === '.charge_history') {
           const diff = 60 * 60 * 1000;
           if (!this.lastChargeHistory || Date.now() - this.lastChargeHistory > diff) {
@@ -495,10 +500,17 @@ class Teslamotors extends utils.Adapter {
           method: element.method || 'GET',
           url: url,
           headers: headers,
+          params: this.config.useNewApi
+            ? {
+                vin: this.id2vin[id],
+                sortBy: 'timestamp',                    
+                sortOrder: 'ASC',                       
+              }
+            : {},
         })
           .then((res) => {
             this.log.debug(JSON.stringify(res.data));
-
+  
             if (!res.data) {
               return;
             }
@@ -567,7 +579,7 @@ class Teslamotors extends utils.Adapter {
             if (element.path.includes('history')) {
               forceIndex = true;
             }
-
+  
             this.json2iob.parse(this.id2vin[id] + element.path, data, {
               preferedArrayName: preferedArrayName,
               forceIndex: forceIndex,
@@ -599,10 +611,10 @@ class Teslamotors extends utils.Adapter {
                 this.log.info('Start refresh token');
                 this.refreshToken();
               }, 1000 * 30);
-
+  
               return;
             }
-
+  
             if (error.response && (error.response.status >= 500 || error.response.status === 408)) {
               this.log.debug(url);
               this.log.debug(error);
@@ -617,7 +629,7 @@ class Teslamotors extends utils.Adapter {
       }
     });
   }
-
+  
   async updateDrive(id) {
     const headers = {
       'Content-Type': 'application/json; charset=utf-8',
