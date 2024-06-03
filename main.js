@@ -504,8 +504,8 @@ class Teslamotors extends utils.Adapter {
           params: this.config.useNewApi
             ? {
                 vin: this.id2vin[id],
-                sortBy: 'timestamp',                    
-                sortOrder: 'ASC',                       
+                sortBy: 'timestamp',
+                sortOrder: 'ASC',
               }
             : {},
         })
@@ -712,20 +712,15 @@ class Teslamotors extends utils.Adapter {
   }
 
   async refreshToken(firstStart) {
-    const apiUrl = this.config.useNewApi ? 'https://auth.tesla.com/oauth2/v3/token' : 'https://auth.tesla.com/oauth2/v3/token';
-    const data = this.config.useNewApi
-      ? qs.stringify({
-          grant_type: 'refresh_token',
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
-          refresh_token: this.config.refreshToken,
-        })
-      : 'grant_type=refresh_token&client_id=ownerapi&scope=openid email offline_access&refresh_token=' +
-        this.session.refresh_token;
+    const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
+    const data = qs.stringify({
+      grant_type: 'refresh_token',
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+      refresh_token: this.config.refreshToken,
+    });
 
-    const headers = this.config.useNewApi
-      ? { 'Content-Type': 'application/x-www-form-urlencoded' }
-      : this.headers;
+    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
     await this.requestClient({
       method: 'post',
@@ -735,12 +730,15 @@ class Teslamotors extends utils.Adapter {
     })
       .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
-        if (this.config.useNewApi) {
-          this.config.accessToken = res.data.access_token;
-          this.config.refreshToken = res.data.refresh_token;
-        } else {
-          this.session.access_token = res.data.access_token;
-          this.session.expires_in = res.data.expires_in;
+        this.config.accessToken = res.data.access_token;
+        this.config.refreshToken = res.data.refresh_token;
+
+        // Save the new tokens in the admin panel
+        const obj = await this.getForeignObjectAsync(this.adapterConfig);
+        if (obj) {
+          obj.native.accessToken = this.config.accessToken;
+          obj.native.refreshToken = this.config.refreshToken;
+          await this.setForeignObjectAsync(this.adapterConfig, obj);
         }
 
         this.setState('info.connection', true, true);
