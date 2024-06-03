@@ -758,9 +758,11 @@ class Teslamotors extends utils.Adapter {
           }
           error.response && this.log.error(JSON.stringify(error.response.data));
           this.log.error('Start relogin in 1min');
-          this.reLoginTimeout = setTimeout(() => {
-            this.login();
-          }, 1000 * 60 * 1);
+          if (!this.config.useNewApi) {
+            this.reLoginTimeout = setTimeout(() => {
+              this.login();
+            }, 1000 * 60 * 1);
+          }
         } else if (firstStart) {
           this.log.error('No connection to tesla server restart adapter in 1min');
           this.reLoginTimeout = setTimeout(() => {
@@ -1043,7 +1045,7 @@ class Teslamotors extends utils.Adapter {
       matches = body.matchAll(/<input (?=[^>]* name=["']([^'"]*)|)(?=[^>]* value=["']([^'"]*)|)/g);
     } else {
       this.log.warn(
-        'The adapter needs in the future NodeJS v12. https://forum.iobroker.net/topic/22867/how-to-node-js-f%C3%BCr-iobroker-richtig-updaten',
+        'The adapter needs in the future NodeJS v12. https://forum.iobroker.net/topic/22867-how-to-node-js-f%C3%BCr-iobroker-richtig-updaten',
       );
       matches = this.matchAll(/<input (?=[^>]* name=["']([^'"]*)|)(?=[^>]* value=["']([^'"]*)|)/g, body);
     }
