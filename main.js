@@ -371,7 +371,7 @@ class Teslamotors extends utils.Adapter {
       {
         path: '.charge_history',
         url: this.config.useNewApi
-          ? 'https://fleet-api.prd.na.vn.cloud.tesla.com/api/1/dx/charging/history'
+          ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/dx/charging/history'
           : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/charge_history?vehicle_trim=5&client_time_zone=Europe/Berlin&client_country=DE&currency_code=EUR&state=&time_zone=Europe/Vatican&state_label=&vehicle_model=2&language=de&country_label=Deutschland&country=DE',
         method: this.config.useNewApi ? 'GET' : 'POST',
       },
