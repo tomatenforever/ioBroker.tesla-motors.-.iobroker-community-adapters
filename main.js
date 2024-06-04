@@ -586,7 +586,7 @@ class Teslamotors extends utils.Adapter {
               preferedArrayName: preferedArrayName,
               forceIndex: forceIndex,
             });
-            if (data.drive_state) {
+            if (data && data.drive_state) {
               if (data.drive_state.shift_state && this.config.intervalDrive > 0) {
                 if (!this.updateIntervalDrive[id]) {
                   this.updateIntervalDrive[id] = setInterval(async () => {
