@@ -785,7 +785,7 @@ class Teslamotors extends utils.Adapter {
     const chargeState = await this.getStateAsync(vin + '.charge_state.charging_state');
   
     if (
-      (shift_state && shift_state.val !== null && shift_state.val !== 'P') ||
+      (shift_state && shift_state.val !== 'P' && shift_state.val !== null) ||
       (chargeState && chargeState.val && !['Disconnected', 'Complete', 'NoPower', 'Stopped'].includes(chargeState.val))
     ) {
       if (shift_state && chargeState) {
@@ -795,6 +795,7 @@ class Teslamotors extends utils.Adapter {
       }
       return false;
     }
+  
     const checkStates = [
       '.drive_state.shift_state',
       '.drive_state.speed',
@@ -824,7 +825,7 @@ class Teslamotors extends utils.Adapter {
     this.log.debug('Since 30 min no changes receiving. Start waiting for sleep');
     return true;
   }
-  
+   
   async sendCommand(id, command, action, value, nonVehicle) {
     const headers = {
       'Content-Type': 'application/json; charset=utf-8',
