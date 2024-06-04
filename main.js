@@ -783,14 +783,14 @@ class Teslamotors extends utils.Adapter {
   async checkWaitForSleepState(vin) {
     const shift_state = await this.getStateAsync(vin + '.drive_state.shift_state');
     const chargeState = await this.getStateAsync(vin + '.charge_state.charging_state');
-
+  
     if (
       (shift_state && shift_state.val !== null && shift_state.val !== 'P') ||
-      (chargeState && !['Disconnected', 'Complete', 'NoPower', 'Stopped'].includes(chargeState.val))
+      (chargeState && chargeState.val && !['Disconnected', 'Complete', 'NoPower', 'Stopped'].includes(chargeState.val))
     ) {
       if (shift_state && chargeState) {
         this.log.debug(
-          'Skip sleep waiting because shift state: ' + shift_state.val + ' or charge state: ' + chargeState.val,
+          `Skip sleep waiting because shift state: ${shift_state.val || 'null'} or charge state: ${chargeState.val || 'null'}`,
         );
       }
       return false;
@@ -811,7 +811,7 @@ class Teslamotors extends utils.Adapter {
       if (stateId === '.drive_state.shift_state' && curState && (curState.val === 'P' || curState.val === null)) {
         continue;
       }
-
+  
       if (curState && (curState.ts <= Date.now() - 1800000 || curState.ts - curState.lc <= 1800000)) {
         this.log.debug(
           `Skip sleep waiting because state ${vin + stateId} changed in last 30min TS: ${new Date(
@@ -824,7 +824,7 @@ class Teslamotors extends utils.Adapter {
     this.log.debug('Since 30 min no changes receiving. Start waiting for sleep');
     return true;
   }
-
+  
   async sendCommand(id, command, action, value, nonVehicle) {
     const headers = {
       'Content-Type': 'application/json; charset=utf-8',
