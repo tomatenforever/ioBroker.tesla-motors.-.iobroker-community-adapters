@@ -38,9 +38,9 @@ class Teslamotors extends utils.Adapter {
 
   async onReady() {
     this.setState('info.connection', false, true);
-    if (this.config.intervalNormal < 1) {
-      this.log.info('Set interval to minimum 1');
-      this.config.intervalNormal = 1;
+    if (this.config.intervalNormal < 25) {
+      this.log.info('Set interval to minimum 25 seconds');
+      this.config.intervalNormal = 25;
     }
     this.adapterConfig = 'system.adapter.' + this.name + '.' + this.instance;
     const obj = await this.getForeignObjectAsync(this.adapterConfig);
@@ -101,13 +101,13 @@ class Teslamotors extends utils.Adapter {
       this.updateInterval = setInterval(async () => {
         await this.updateDevices();
       }, this.config.intervalNormal * 1000);
-      if (this.config.locationInterval > 10) {
+      if (this.config.locationInterval > 60) {
         this.updateDevices(false, true);
         this.locationInterval = setInterval(async () => {
           await this.updateDevices(false, true);
         }, this.config.locationInterval * 1000);
       } else {
-        this.log.info('Location interval is less than 10s. Skip location update');
+        this.log.info('Location interval is less than 60s. Skip location update');
       }
       if (!this.config.useNewApi) {
         const intervalTime = this.session.expires_in ? (this.session.expires_in - 200) * 1000 : 3000 * 1000;
