@@ -513,7 +513,7 @@ class Teslamotors extends utils.Adapter {
           params: this.config.useNewApi
             ? {
                 vin: this.id2vin[id],
-                sortBy: 'timestamp',
+           //     sortBy: 'timestamp',
                 sortOrder: 'ASC',
               }
             : {},
