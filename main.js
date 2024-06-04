@@ -23,6 +23,7 @@ class Teslamotors extends utils.Adapter {
     this.on('unload', this.onUnload.bind(this));
 
     this.session = {};
+    this.tempTokens = {}; // Temporäre Tokens
     this.sleepTimes = {};
     this.lastStates = {};
     this.updateIntervalDrive = {};
@@ -730,16 +731,8 @@ class Teslamotors extends utils.Adapter {
     })
       .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
-        this.config.accessToken = res.data.access_token;
-        this.config.refreshToken = res.data.refresh_token;
-
-        // Save the new tokens in the admin panel
-        const obj = await this.getForeignObjectAsync(this.adapterConfig);
-        if (obj) {
-          obj.native.accessToken = this.config.accessToken;
-          obj.native.refreshToken = this.config.refreshToken;
-          await this.setForeignObjectAsync(this.adapterConfig, obj);
-        }
+        this.tempTokens.accessToken = res.data.access_token; // Temporäre Speicherung
+        this.tempTokens.refreshToken = res.data.refresh_token; // Temporäre Speicherung
 
         this.setState('info.connection', true, true);
         return res.data;
@@ -1089,7 +1082,7 @@ class Teslamotors extends utils.Adapter {
   async onUnload(callback) {
     try {
       this.setState('info.connection', false, true);
-
+  
       if (this.ws) {
         this.ws.close();
       }
@@ -1105,6 +1098,8 @@ class Teslamotors extends utils.Adapter {
       this.log.info('Save login session');
       if (obj) {
         obj.native.session = this.session;
+        obj.native.accessToken = this.tempTokens.accessToken || this.config.accessToken; // Speichern der temporären Tokens
+        obj.native.refreshToken = this.tempTokens.refreshToken || this.config.refreshToken; // Speichern der temporären Tokens
         this.log.debug('Session saved');
         await this.setForeignObjectAsync(this.adapterConfig, obj);
       }
@@ -1113,7 +1108,7 @@ class Teslamotors extends utils.Adapter {
       callback();
     }
   }
-
+  
   async onStateChange(id, state) {
     if (state) {
       if (!state.ack) {
