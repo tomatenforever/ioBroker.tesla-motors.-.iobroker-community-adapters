@@ -102,13 +102,13 @@ class Teslamotors extends utils.Adapter {
       this.updateInterval = setInterval(async () => {
         await this.updateDevices();
       }, this.config.intervalNormal * 1000);
-      if (this.config.locationInterval > 60) {
+      if (this.config.locationInterval > 10) {
         this.updateDevices(false, true);
         this.locationInterval = setInterval(async () => {
           await this.updateDevices(false, true);
         }, this.config.locationInterval * 1000);
       } else {
-        this.log.info('Location interval is less than 60s. Skip location update');
+        this.log.info('Location interval is less than 10s. Skip location update');
       }
       if (!this.config.useNewApi) {
         const intervalTime = this.session.expires_in ? (this.session.expires_in - 200) * 1000 : 3000 * 1000;
