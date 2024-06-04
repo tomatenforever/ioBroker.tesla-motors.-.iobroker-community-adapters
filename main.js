@@ -28,7 +28,8 @@ class Teslamotors extends utils.Adapter {
     this.lastStates = {};
     this.updateIntervalDrive = {};
     this.idArray = [];
-
+    this.retryAfter = {}; // Retry-After Zeit für jedes Fahrzeug
+    this.minInterval = 15000; // Minimum Intervall in Millisekunden
     this.json2iob = new Json2iob(this);
     this.vin2id = {};
     this.id2vin = {};
@@ -498,6 +499,13 @@ class Teslamotors extends utils.Adapter {
             return;
           }
         }
+
+        // Check if rate limit applies
+        if (this.retryAfter[id] && Date.now() < this.retryAfter[id]) {
+          this.log.debug(`Skip update for ${id} due to rate limit. Retry after ${new Date(this.retryAfter[id]).toLocaleTimeString()}`);
+          continue;
+        }
+
         await this.requestClient({
           method: element.method || 'GET',
           url: url,
@@ -505,7 +513,7 @@ class Teslamotors extends utils.Adapter {
           params: this.config.useNewApi
             ? {
                 vin: this.id2vin[id],
-               // sortBy: 'timestamp',
+                sortBy: 'timestamp',
                 sortOrder: 'ASC',
               }
             : {},
@@ -621,6 +629,13 @@ class Teslamotors extends utils.Adapter {
               this.log.debug(url);
               this.log.debug(error);
               error.response && this.log.debug(JSON.stringify(error.response.data));
+              return;
+            }
+            if (error.response && error.response.status === 429) {
+              const retryAfterSeconds = parseInt(error.response.headers['retry-after'], 10);
+              this.retryAfter[id] = Date.now() + retryAfterSeconds * 1000;
+              this.minInterval = Math.min(this.minInterval + 5000, retryAfterSeconds * 1000); // Erhöhe das Intervall um 5 Sekunden
+              this.log.warn(`Rate limit exceeded for ${id}. Retry after ${retryAfterSeconds} seconds. Increasing min interval to ${this.minInterval / 1000} seconds.`);
               return;
             }
             this.log.error('General error');
