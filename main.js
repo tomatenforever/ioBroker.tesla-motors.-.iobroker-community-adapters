@@ -612,15 +612,118 @@ class Teslamotors extends utils.Adapter {
           .catch((error) => {
             if (error.response && error.response.status === 401) {
               error.response && this.log.error(JSON.stringify(error.response.data));
-              this.log.info(element.path + ' receive 401 error. Refresh Token in 30 seconds');
-              if (this.refreshTokenTimeout) {
-                return;
-              }
-              this.refreshTokenTimeout = setTimeout(() => {
-                this.refreshTokenTimeout = null;
-                this.log.info('Start refresh token');
-                this.refreshToken();
-              }, 1000 * 30);
+              this.log.info(element.path + ' receive 401 error. Refresh Token');
+              await this.refreshToken();
+
+              // Retry the request after refreshing the token
+              await this.requestClient({
+                method: element.method || 'GET',
+                url: url,
+                headers: {
+                  ...headers,
+                  Authorization: 'Bearer ' + this.session.access_token,
+                },
+                params: this.config.useNewApi
+                  ? {
+                      vin: this.id2vin[id],
+                      sortOrder: 'ASC',
+                    }
+                  : {},
+              }).then((res) => {
+                this.log.debug(JSON.stringify(res.data));
+
+                if (!res.data) {
+                  return;
+                }
+                if (res.data.response && res.data.response.tokens) {
+                  delete res.data.response.tokens;
+                }
+                const data = res.data.response;
+                let preferedArrayName = 'timestamp';
+                let forceIndex = false;
+                if (element.path === '.charge_history') {
+                  preferedArrayName = 'title';
+                  if (data && data.charging_history_graph) {
+                    delete data.charging_history_graph.y_labels;
+                    delete data.charging_history_graph.x_labels;
+                  }
+                  if (data && data.gas_savings) {
+                    delete data.gas_savings.card;
+                  }
+                  if (data && data.energy_cost_breakdown) {
+                    delete data.energy_cost_breakdown.card;
+                  }
+                  if (data && data.charging_tips) {
+                    delete data.charging_tips;
+                  }
+                }
+                if (element.path.includes('lifetime')) {
+                  for (const serie of data.time_series) {
+                    if (!data.total) {
+                      data.total = JSON.parse(JSON.stringify(serie));
+                    } else {
+                      for (const key in serie) {
+                        if (typeof serie[key] === 'number') {
+                          data.total[key] += serie[key];
+                        } else {
+                          data.total[key] = serie[key];
+                        }
+                      }
+                    }
+                  }
+                }
+                if (element.path.includes('energy_history')) {
+                  const totals = {};
+                  for (const serie of data.time_series) {
+                    let date = serie.timestamp.split('T')[0];
+                    if (element.path.includes('lifetime')) {
+                      date = serie.timestamp.slice(0, 4);
+                    }
+                    if (!totals[date]) {
+                      totals[date] = JSON.parse(JSON.stringify(serie));
+                    } else {
+                      for (const key in serie) {
+                        if (typeof serie[key] === 'number') {
+                          totals[date][key] += serie[key];
+                        } else {
+                          totals[date][key] = serie[key];
+                        }
+                      }
+                    }
+                  }
+                  const totalArray = [];
+                  for (const key in totals) {
+                    totalArray.push(totals[key]);
+                  }
+                  data.time_series = totalArray;
+                }
+                if (element.path.includes('history')) {
+                  forceIndex = true;
+                }
+
+                this.json2iob.parse(this.id2vin[id] + element.path, data, {
+                  preferedArrayName: preferedArrayName,
+                  forceIndex: forceIndex,
+                });
+                if (data && data.drive_state) {
+                  if (data.drive_state.shift_state && this.config.intervalDrive > 0) {
+                    if (!this.updateIntervalDrive[id]) {
+                      this.updateIntervalDrive[id] = setInterval(async () => {
+                        this.updateDrive(id);
+                      }, this.config.intervalDrive * 1000);
+                    }
+                  } else {
+                    if (this.updateIntervalDrive[id]) {
+                      clearInterval(this.updateIntervalDrive[id]);
+                      this.updateIntervalDrive[id] = null;
+                    }
+                  }
+                }
+              }).catch((error) => {
+                this.log.error(url);
+                this.log.error(error);
+                error.response && this.log.error(JSON.stringify(error.response.data));
+              });
 
               return;
             }
@@ -653,11 +756,11 @@ class Teslamotors extends utils.Adapter {
       Accept: '*/*',
       Authorization: 'Bearer ' + this.session.access_token,
     };
-
+  
     const apiUrl = this.config.useNewApi
       ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state'
       : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state';
-
+  
     await this.requestClient({
       method: 'get',
       url: apiUrl,
@@ -665,7 +768,7 @@ class Teslamotors extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
-
+  
         if (!res.data) {
           return;
         }
@@ -673,32 +776,64 @@ class Teslamotors extends utils.Adapter {
           delete res.data.response.tokens;
         }
         const data = res.data.response;
-
+  
         this.json2iob.parse(this.id2vin[id], data);
       })
-      .catch((error) => {
+      .catch(async (error) => {
+        if (error.response && error.response.status === 401) {
+          this.log.info('Update drive receive 401 error. Refresh Token');
+          await this.refreshToken();
+  
+          // Retry the request after refreshing the token
+          await this.requestClient({
+            method: 'get',
+            url: apiUrl,
+            headers: {
+              ...headers,
+              Authorization: 'Bearer ' + this.session.access_token,
+            },
+          }).then((res) => {
+            this.log.debug(JSON.stringify(res.data));
+  
+            if (!res.data) {
+              return;
+            }
+            if (res.data.response && res.data.response.tokens) {
+              delete res.data.response.tokens;
+            }
+            const data = res.data.response;
+  
+            this.json2iob.parse(this.id2vin[id], data);
+          }).catch((error) => {
+            this.log.error(apiUrl);
+            this.log.error(error);
+            error.response && this.log.error(JSON.stringify(error.response.data));
+          });
+  
+          return;
+        }
         if (error.response && (error.response.status >= 500 || error.response.status === 408)) {
           this.log.debug(error);
           error.response && this.log.debug(JSON.stringify(error.response.data));
           return;
         }
-
+  
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
   }
-
+  
   async checkState(id) {
     const headers = {
       'Content-Type': 'application/json; charset=utf-8',
       Accept: '*/*',
       Authorization: 'Bearer ' + this.session.access_token,
     };
-
+  
     const apiUrl = this.config.useNewApi
       ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id
       : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id;
-
+  
     return await this.requestClient({
       method: 'get',
       url: apiUrl,
@@ -712,7 +847,32 @@ class Teslamotors extends utils.Adapter {
         this.json2iob.parse(this.id2vin[id], res.data.response, { preferedArrayName: 'timestamp' });
         return res.data.response.state;
       })
-      .catch((error) => {
+      .catch(async (error) => {
+        if (error.response && error.response.status === 401) {
+          this.log.info('Check state receive 401 error. Refresh Token');
+          await this.refreshToken();
+  
+          // Retry the request after refreshing the token
+          return await this.requestClient({
+            method: 'get',
+            url: apiUrl,
+            headers: {
+              ...headers,
+              Authorization: 'Bearer ' + this.session.access_token,
+            },
+          }).then((res) => {
+            this.log.debug(JSON.stringify(res.data));
+            if (res.data.response && res.data.response.tokens) {
+              delete res.data.response.tokens;
+            }
+            this.json2iob.parse(this.id2vin[id], res.data.response, { preferedArrayName: 'timestamp' });
+            return res.data.response.state;
+          }).catch((error) => {
+            this.log.error(apiUrl);
+            this.log.error(error);
+            error.response && this.log.error(JSON.stringify(error.response.data));
+          });
+        }
         if (error.response && error.response.status === 404) {
           return;
         }
@@ -726,7 +886,7 @@ class Teslamotors extends utils.Adapter {
         return;
       });
   }
-
+  
   async refreshToken(firstStart) {
     const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
     const data = qs.stringify({
@@ -831,22 +991,22 @@ class Teslamotors extends utils.Adapter {
       'Content-Type': 'application/json; charset=utf-8',
       Accept: '*/*',
       Authorization: 'Bearer ' + this.session.access_token,
-      'x-tesla-command-protocol': '2023-10-09', // Hinzufügen des Tesla Command Protokolls
+      'x-tesla-command-protocol': '2023-10-09',
     };
-
+  
     const apiUrlBase = this.config.useNewApi
       ? `${this.config.teslaApiProxyUrl}/api/1/vehicles/${this.id2vin[id]}`
       : `https://owner-api.teslamotors.com/api/1/vehicles/${id}`;
-
+  
     let url = `${apiUrlBase}/command/${command}`;
-
+  
     if (command === 'wake_up') {
       url = `${apiUrlBase}/wake_up`;
     }
     if (nonVehicle) {
       url = apiUrlBase.replace('/vehicles/', '/energy_sites/') + '/' + command;
     }
-
+  
     const passwordArray = ['remote_start_drive'];
     const latlonArray = ['trigger_homelink', 'window_control'];
     const onArray = [
@@ -871,7 +1031,7 @@ class Teslamotors extends utils.Adapter {
     const trunkArray = ['actuate_trunk'];
     const plainArray = ['set_scheduled_charging', 'set_scheduled_departure'];
     let data = {};
-
+  
     if (passwordArray.includes(command)) {
       data['password'] = this.config.password;
     }
@@ -925,7 +1085,7 @@ class Teslamotors extends utils.Adapter {
         timestamp_ms: (Date.now() / 1000).toFixed(0),
       };
     }
-
+  
     if (plainArray.includes(command)) {
       try {
         data = JSON.parse(value);
@@ -940,7 +1100,7 @@ class Teslamotors extends utils.Adapter {
       url: url,
       headers: headers,
       data: data,
-      timeout: 5000, // Timeout auf 5 Sekunden setzen
+      timeout: 5000,
     })
       .then((res) => {
         this.log.info(JSON.stringify(res.data));
@@ -952,15 +1112,33 @@ class Teslamotors extends utils.Adapter {
       .catch(async (error) => {
         if (error.response && error.response.status === 401) {
           error.response && this.log.debug(JSON.stringify(error.response.data));
-          this.log.info(command + ' receive 401 error. Refresh Token in 30 seconds');
-          if (this.refreshTokenTimeout) {
-            return;
-          }
-          this.refreshTokenTimeout = setTimeout(() => {
-            this.refreshTokenTimeout = null;
-            this.log.info('Start refresh token');
-            this.refreshToken();
-          }, 1000 * 30);
+          this.log.info(command + ' receive 401 error. Refresh Token');
+          
+          await this.refreshToken();
+          
+          // Retry the request after refreshing the token
+          return this.requestClient({
+            method: 'post',
+            url: url,
+            headers: {
+              ...headers,
+              Authorization: 'Bearer ' + this.session.access_token,
+            },
+            data: data,
+            timeout: 5000,
+          }).then((res) => {
+            this.log.info(JSON.stringify(res.data));
+            if (res.data.response && res.data.response.tokens) {
+              delete res.data.response.tokens;
+            }
+            return res.data.response;
+          }).catch((error) => {
+            this.log.error(url);
+            this.log.error(error);
+            error.response && this.log.error(JSON.stringify(error.response.data));
+            throw error;
+          });
+          
         } else {
           this.log.error(url);
           this.log.error(error);
@@ -969,7 +1147,7 @@ class Teslamotors extends utils.Adapter {
         }
       });
   }
-
+  
   async connectToWS(vehicleId, id) {
     if (this.ws) {
       this.ws.close();
