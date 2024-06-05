@@ -29,7 +29,7 @@ class Teslamotors extends utils.Adapter {
     this.updateIntervalDrive = {};
     this.idArray = [];
     this.retryAfter = {}; // Retry-After Zeit für jedes Fahrzeug
-    this.minInterval = 15000; // Minimum Intervall in Millisekunden
+    this.minInterval = 432000; // Minimum Intervall in Millisekunden
     this.json2iob = new Json2iob(this);
     this.vin2id = {};
     this.id2vin = {};
@@ -39,9 +39,9 @@ class Teslamotors extends utils.Adapter {
 
   async onReady() {
     this.setState('info.connection', false, true);
-    if (this.config.intervalNormal < 25) {
-        this.log.info('Set interval to minimum 25 seconds');
-        this.config.intervalNormal = 25;
+    if (this.config.intervalNormal < 432) {
+        this.log.info('Set interval to minimum 423 seconds');
+        this.config.intervalNormal = 432;
     }
     this.adapterConfig = 'system.adapter.' + this.name + '.' + this.instance;
     const obj = await this.getForeignObjectAsync(this.adapterConfig);
