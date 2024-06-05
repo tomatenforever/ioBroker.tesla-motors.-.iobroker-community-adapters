@@ -70,7 +70,7 @@ class Teslamotors extends utils.Adapter {
         }
     }
 
-    if (obj && obj.native.session && obj.native.session.refresh_token) {
+    if (obj && obj.native.session && obj.native.session.refreshToken) {
         this.session = obj.native.session;
         this.log.info('Session loaded');
         this.log.info('Refresh session');
