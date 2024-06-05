@@ -74,7 +74,6 @@ class Teslamotors extends utils.Adapter {
       this.session = obj.native.session;
       this.log.info('Session loaded');
       this.log.info('Refresh session');
-      this.tempTokens.refreshToken = this.session.refresh_token;
       await this.refreshToken(true);
     }
 
@@ -889,11 +888,15 @@ async checkState(id) {
   
 async refreshToken(firstStart) {
   const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
+  if (this.tempTokens == "") {
+  this.tempTokens.refreshToken = this.config.refresh_token;
+  console.log("Aktualisiere Temp Token mit : " + this.config.refresh_token);
+  } 
   const data = qs.stringify({
       grant_type: 'refresh_token',
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,
-      refresh_token: this.tempTokens.refresh_token,
+      refresh_token: this.tempTokens.refreshToken,
   });
 
   console.log(data);
