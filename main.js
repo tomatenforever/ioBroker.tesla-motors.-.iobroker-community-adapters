@@ -895,7 +895,7 @@ async refreshToken(firstStart) {
       refresh_token: this.session.refresh_token,
   });
 
-  console.log("Refresh Token benutzt : " + this.session.refresh_token + "Client_ID" + this.session.client_id);
+  this.log.debug("Refresh Token benutzt : " + this.session.refresh_token + "Client_ID" + this.session.client_id);
 
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
