@@ -918,13 +918,13 @@ async refreshToken(firstStart) {
           this.tempTokens.refreshToken = res.data.refresh_token;
 
           // Speichere die aktualisierten Tokens im Adapter
-          const obj = await this.getForeignObjectAsync(this.adapterConfig);
+         /* const obj = await this.getForeignObjectAsync(this.adapterConfig);
           if (obj) {
               obj.native.session = this.session;
               obj.native.accessToken = this.tempTokens.accessToken;
               obj.native.refreshToken = this.tempTokens.refreshToken;
               await this.setForeignObjectAsync(this.adapterConfig, obj);
-          }
+          }*/
 
           this.setState('info.connection', true, true);
           return res.data;
