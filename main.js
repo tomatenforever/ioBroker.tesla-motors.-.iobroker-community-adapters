@@ -886,58 +886,62 @@ async checkState(id) {
       });
 }
   
-  async refreshToken(firstStart) {
-    const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
-    const data = qs.stringify({
+async refreshToken(firstStart) {
+  const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
+  const data = qs.stringify({
       grant_type: 'refresh_token',
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,
-      refresh_token: this.config.refreshToken,
-    });
+      refresh_token: this.session.refresh_token,
+  });
 
-    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+  const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
-    await this.requestClient({
+  await this.requestClient({
       method: 'post',
       url: apiUrl,
       headers: headers,
       data: data,
-    })
+  })
       .then(async (res) => {
-        this.log.debug(JSON.stringify(res.data));
-        this.tempTokens.accessToken = res.data.access_token; // Temporäre Speicherung
-        this.tempTokens.refreshToken = res.data.refresh_token; // Temporäre Speicherung
+          this.log.debug(JSON.stringify(res.data));
+          this.session.access_token = res.data.access_token; // Token aktualisieren
+          this.session.refresh_token = res.data.refresh_token; // Refresh-Token aktualisieren
 
-        this.setState('info.connection', true, true);
-        return res.data;
+          // Aktualisiere die gespeicherten Tokens
+          this.tempTokens.accessToken = res.data.access_token;
+          this.tempTokens.refreshToken = res.data.refresh_token;
+
+          this.setState('info.connection', true, true);
+          return res.data;
       })
       .catch(async (error) => {
-        this.setState('info.connection', false, true);
-        this.log.error('refresh token failed');
-        this.log.error(error);
-        if (error.code === 'ENOTFOUND') {
-          this.log.error('No connection to Tesla server please check your connection');
-          return;
-        }
-        if (error.response && error.response.status >= 400 && error.response.status < 500) {
-          if (!this.config.useNewApi) {
-            this.session = {};
+          this.setState('info.connection', false, true);
+          this.log.error('refresh token failed');
+          this.log.error(error);
+          if (error.code === 'ENOTFOUND') {
+              this.log.error('No connection to Tesla server please check your connection');
+              return;
           }
-          error.response && this.log.error(JSON.stringify(error.response.data));
-          this.log.error('Start relogin in 1min');
-          if (!this.config.useNewApi) {
-            this.reLoginTimeout = setTimeout(() => {
-              this.login();
-            }, 1000 * 60 * 1);
+          if (error.response && error.response.status >= 400 && error.response.status < 500) {
+              if (!this.config.useNewApi) {
+                  this.session = {};
+              }
+              error.response && this.log.error(JSON.stringify(error.response.data));
+              this.log.error('Start relogin in 1min');
+              if (!this.config.useNewApi) {
+                  this.reLoginTimeout = setTimeout(() => {
+                      this.login();
+                  }, 1000 * 60 * 1);
+              }
+          } else if (firstStart) {
+              this.log.error('No connection to tesla server restart adapter in 1min');
+              this.reLoginTimeout = setTimeout(() => {
+                  this.restart();
+              }, 1000 * 60 * 1);
           }
-        } else if (firstStart) {
-          this.log.error('No connection to tesla server restart adapter in 1min');
-          this.reLoginTimeout = setTimeout(() => {
-            this.restart();
-          }, 1000 * 60 * 1);
-        }
       });
-  }
+}
 
   async checkWaitForSleepState(vin) {
     const shift_state = await this.getStateAsync(vin + '.drive_state.shift_state');
