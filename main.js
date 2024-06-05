@@ -893,8 +893,10 @@ async refreshToken(firstStart) {
       grant_type: 'refresh_token',
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,
-      refresh_token: this.session.refresh_token,
+      refresh_token: this.tempTokens.refresh_token,
   });
+
+  console.log(data);
 
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
