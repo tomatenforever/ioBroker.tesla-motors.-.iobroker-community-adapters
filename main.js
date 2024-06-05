@@ -890,12 +890,12 @@ async refreshToken(firstStart) {
   const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
   const data = qs.stringify({
       grant_type: 'refresh_token',
-      client_id: this.config.clientId,
-      client_secret: this.config.clientSecret,
-      refresh_token: this.config.refresh_token,
+      client_id: this.session.clientId,
+      client_secret: this.session.clientSecret,
+      refresh_token: this.session.refresh_token,
   });
 
-  console.log("Refresh Token benutzt : " + this.config.refresh_token);
+  console.log("Refresh Token benutzt : " + this.session.refresh_token + "Client_ID" + this.session.client_id);
 
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
