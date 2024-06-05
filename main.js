@@ -896,6 +896,7 @@ async refreshToken(firstStart) {
   });
 
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+  this.login.debug("Refresh Token : " + this.session.refresh_token);
 
   await this.requestClient({
       method: 'post',
