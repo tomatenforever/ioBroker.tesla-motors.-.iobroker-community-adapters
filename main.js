@@ -890,8 +890,8 @@ async refreshToken(firstStart) {
   const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
   const data = qs.stringify({
       grant_type: 'refresh_token',
-      client_id: this.session.clientId,
-      client_secret: this.session.clientSecret,
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
       refresh_token: this.session.refresh_token,
   });
 
