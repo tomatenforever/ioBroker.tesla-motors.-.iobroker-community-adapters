@@ -364,528 +364,527 @@ class Teslamotors extends utils.Adapter {
 
   async updateDevices(forceUpdate, location = false) {
     let vehicleStatusArray = [
-      {
-        path: '',
-        url: this.config.useNewApi
-          ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/{id}/vehicle_data'
-          : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/vehicle_data',
-      },
-      {
-        path: '.charge_history',
-        url: this.config.useNewApi
-          ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/dx/charging/history'
-          : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/charge_history?vehicle_trim=5&client_time_zone=Europe/Berlin&client_country=DE&currency_code=EUR&state=&time_zone=Europe/Vatican&state_label=&vehicle_model=2&language=de&country_label=Deutschland&country=DE',
-        method: this.config.useNewApi ? 'GET' : 'POST',
-      },
+        {
+            path: '',
+            url: this.config.useNewApi
+                ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/{id}/vehicle_data'
+                : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/vehicle_data',
+        },
+        {
+            path: '.charge_history',
+            url: this.config.useNewApi
+                ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/dx/charging/history'
+                : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/charge_history?vehicle_trim=5&client_time_zone=Europe/Berlin&client_country=DE&currency_code=EUR&state=&time_zone=Europe/Vatican&state_label=&vehicle_model=2&language=de&country_label=Deutschland&country=DE',
+            method: this.config.useNewApi ? 'GET' : 'POST',
+        },
     ];
 
     if (location) {
-      vehicleStatusArray = [
-        {
-          path: '',
-          url: this.config.useNewApi
-            ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/{id}/vehicle_data?endpoints=location_data'
-            : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/vehicle_data?endpoints=location_data',
-        },
-      ];
+        vehicleStatusArray = [
+            {
+                path: '',
+                url: this.config.useNewApi
+                    ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/{id}/vehicle_data?endpoints=location_data'
+                    : 'https://owner-api.teslamotors.com/api/1/vehicles/{id}/vehicle_data?endpoints=location_data',
+            },
+        ];
     }
 
     const powerwallArray = [
-      { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_status' },
-      { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_info' },
-      { path: '.live_status', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status' },
-      { path: '.backup_history', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/history?kind=backup' },
-      { path: '.energy_history', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&period=day&time_zone=Europe%2FBerlin' },
-      { path: '.self_consumption_history', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=day&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&time_zone=Europe%2FBerlin&end_date=${this.getDate()}` },
-      { path: '.self_consumption_history_lifetime', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=lifetime&time_zone=Europe%2FBerlin&end_date=${this.getDate()}` },
-      { path: '.energy_history_lifetime', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&time_zone=Europe/Berlin&period=lifetime&end_date=${this.getDate()}` },
+        { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_status' },
+        { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_info' },
+        { path: '.live_status', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status' },
+        { path: '.backup_history', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/history?kind=backup' },
+        { path: '.energy_history', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&period=day&time_zone=Europe%2FBerlin' },
+        { path: '.self_consumption_history', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=day&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&time_zone=Europe%2FBerlin&end_date=${this.getDate()}` },
+        { path: '.self_consumption_history_lifetime', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=self_consumption&period=lifetime&time_zone=Europe%2FBerlin&end_date=${this.getDate()}` },
+        { path: '.energy_history_lifetime', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/calendar_history?kind=energy&time_zone=Europe/Berlin&period=lifetime&end_date=${this.getDate()}` },
     ];
 
     const wallboxArray = [
-      { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_info' },
-      { path: '.live_status', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status' },
-      { path: '.telemetry_history', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/telemetry_history?period=month&time_zone=Europe%2FBerlin&kind=charge&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&end_date=${this.getDate()}` },
+        { path: '', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/site_info' },
+        { path: '.live_status', url: 'https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/live_status' },
+        { path: '.telemetry_history', url: `https://owner-api.teslamotors.com/api/1/energy_sites/{energy_site_id}/telemetry_history?period=month&time_zone=Europe%2FBerlin&kind=charge&start_date=2016-01-01T00%3A00%3A00%2B01%3A00&end_date=${this.getDate()}` },
     ];
 
     const headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+        Accept: '*/*',
+        Authorization: 'Bearer ' + this.session.access_token,
+    };
+
+    for (const product of this.idArray) {
+        const id = product.id;
+        let currentArray;
+        const energy_site_id = product.energy_site_id;
+        if (product.type === 'vehicle') {
+            let state = await this.checkState(id);
+            this.log.debug(id + ': ' + state);
+            if (state === 'asleep' && !this.config.wakeup) {
+                this.log.debug(id + ' asleep skip update');
+                this.lastStates[id] = state;
+                continue;
+            }
+            let waitForSleep = false;
+            if (this.lastStates[id] && this.lastStates[id] !== 'asleep' && forceUpdate !== true) {
+                waitForSleep = await this.checkWaitForSleepState(product.vin);
+            } else {
+                if (forceUpdate) {
+                    this.log.debug('Skip wait because force update');
+                } else {
+                    this.log.debug('Skip wait because last state was asleep');
+                }
+            }
+            this.lastStates[id] = state;
+
+            if (waitForSleep && !this.config.wakeup) {
+                if (!this.sleepTimes[id]) {
+                    this.sleepTimes[id] = Date.now();
+                    if (this.ws) {
+                        this.ws.close();
+                    }
+                }
+                if (Date.now() - this.sleepTimes[id] >= 900000) {
+                    this.log.debug(id + ' wait for sleep was not successful');
+                    this.sleepTimes[id] = null;
+                } else {
+                    this.log.debug(id + ' skip update. Waiting for sleep');
+                    continue;
+                }
+            }
+
+            if (this.config.wakeup && state !== 'online') {
+                while (state !== 'online') {
+                    let errorButNotTimeout = false;
+
+                    const vehicleState = await this.sendCommand(id, 'wake_up').catch((error) => {
+                        if (error.response && error.response.status !== 408 && error.response.status !== 503) {
+                            errorButNotTimeout = true;
+                        }
+                    });
+                    if (errorButNotTimeout || !vehicleState) {
+                        break;
+                    }
+                    state = vehicleState.state;
+                    await this.sleep(10000);
+                }
+            }
+            currentArray = vehicleStatusArray;
+
+            if (this.config.streaming) {
+                this.connectToWS(product.vehicle_id, product.id);
+            }
+        } else if (product.type === 'wall_connector') {
+            currentArray = wallboxArray;
+        } else {
+            currentArray = powerwallArray;
+        }
+        this.log.debug(`Update ${id} with array: ${JSON.stringify(currentArray)}`);
+        for (const element of currentArray) {
+            const exlucdeList = this.config.excludeElementList.replace(/\s/g, '').split(',');
+            if (element.path && exlucdeList.includes(element.path.replace('.', ''))) {
+                this.log.info('Skip path ' + element.path);
+                continue;
+            }
+            let url = element.url.replace('{id}', id);
+            url = url.replace('{energy_site_id}', energy_site_id);
+            this.log.debug(url);
+
+            if (element.path === '.charge_history') {
+                const diff = 60 * 60 * 1000;
+                if (!this.lastChargeHistory || Date.now() - this.lastChargeHistory > diff) {
+                    this.lastChargeHistory = Date.now();
+                } else {
+                    this.log.debug('Skip charge history because last update was less than 1h ago');
+                    continue;
+                }
+            }
+
+            // Check if rate limit applies
+            if (this.retryAfter[id] && Date.now() < this.retryAfter[id]) {
+                this.log.debug(`Skip update for ${id} due to rate limit. Retry after ${new Date(this.retryAfter[id]).toLocaleTimeString()}`);
+                continue;
+            }
+
+            await this.requestClient({
+                method: element.method || 'GET',
+                url: url,
+                headers: headers,
+                params: this.config.useNewApi
+                    ? {
+                        vin: this.id2vin[id],
+                        sortOrder: 'ASC',
+                    }
+                    : {},
+            })
+                .then((res) => {
+                    this.log.debug(JSON.stringify(res.data));
+
+                    if (!res.data) {
+                        return;
+                    }
+                    if (res.data.response && res.data.response.tokens) {
+                        delete res.data.response.tokens;
+                    }
+                    const data = res.data.response;
+                    let preferedArrayName = 'timestamp';
+                    let forceIndex = false;
+                    if (element.path === '.charge_history') {
+                        preferedArrayName = 'title';
+                        if (data && data.charging_history_graph) {
+                            delete data.charging_history_graph.y_labels;
+                            delete data.charging_history_graph.x_labels;
+                        }
+                        if (data && data.gas_savings) {
+                            delete data.gas_savings.card;
+                        }
+                        if (data && data.energy_cost_breakdown) {
+                            delete data.energy_cost_breakdown.card;
+                        }
+                        if (data && data.charging_tips) {
+                            delete data.charging_tips;
+                        }
+                    }
+                    if (element.path.includes('lifetime')) {
+                        for (const serie of data.time_series) {
+                            if (!data.total) {
+                                data.total = JSON.parse(JSON.stringify(serie));
+                            } else {
+                                for (const key in serie) {
+                                    if (typeof serie[key] === 'number') {
+                                        data.total[key] += serie[key];
+                                    } else {
+                                        data.total[key] = serie[key];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (element.path.includes('energy_history')) {
+                        const totals = {};
+                        for (const serie of data.time_series) {
+                            let date = serie.timestamp.split('T')[0];
+                            if (element.path.includes('lifetime')) {
+                                date = serie.timestamp.slice(0, 4);
+                            }
+                            if (!totals[date]) {
+                                totals[date] = JSON.parse(JSON.stringify(serie));
+                            } else {
+                                for (const key in serie) {
+                                    if (typeof serie[key] === 'number') {
+                                        totals[date][key] += serie[key];
+                                    } else {
+                                        totals[date][key] = serie[key];
+                                    }
+                                }
+                            }
+                        }
+                        const totalArray = [];
+                        for (const key in totals) {
+                            totalArray.push(totals[key]);
+                        }
+                        data.time_series = totalArray;
+                    }
+                    if (element.path.includes('history')) {
+                        forceIndex = true;
+                    }
+
+                    this.json2iob.parse(this.id2vin[id] + element.path, data, {
+                        preferedArrayName: preferedArrayName,
+                        forceIndex: forceIndex,
+                    });
+                    if (data && data.drive_state) {
+                        if (data.drive_state.shift_state && this.config.intervalDrive > 0) {
+                            if (!this.updateIntervalDrive[id]) {
+                                this.updateIntervalDrive[id] = setInterval(async () => {
+                                    this.updateDrive(id);
+                                }, this.config.intervalDrive * 1000);
+                            }
+                        } else {
+                            if (this.updateIntervalDrive[id]) {
+                                clearInterval(this.updateIntervalDrive[id]);
+                                this.updateIntervalDrive[id] = null;
+                            }
+                        }
+                    }
+                })
+                .catch(async (error) => {
+                    if (error.response && error.response.status === 401) {
+                        error.response && this.log.error(JSON.stringify(error.response.data));
+                        this.log.info(element.path + ' receive 401 error. Refresh Token');
+                        await this.refreshToken();
+
+                        // Retry the request after refreshing the token
+                        await this.requestClient({
+                            method: element.method || 'GET',
+                            url: url,
+                            headers: {
+                                ...headers,
+                                Authorization: 'Bearer ' + this.session.access_token,
+                            },
+                            params: this.config.useNewApi
+                                ? {
+                                    vin: this.id2vin[id],
+                                    sortOrder: 'ASC',
+                                }
+                                : {},
+                        }).then((res) => {
+                            this.log.debug(JSON.stringify(res.data));
+
+                            if (!res.data) {
+                                return;
+                            }
+                            if (res.data.response && res.data.response.tokens) {
+                                delete res.data.response.tokens;
+                            }
+                            const data = res.data.response;
+                            let preferedArrayName = 'timestamp';
+                            let forceIndex = false;
+                            if (element.path === '.charge_history') {
+                                preferedArrayName = 'title';
+                                if (data && data.charging_history_graph) {
+                                    delete data.charging_history_graph.y_labels;
+                                    delete data.charging_history_graph.x_labels;
+                                }
+                                if (data && data.gas_savings) {
+                                    delete data.gas_savings.card;
+                                }
+                                if (data && data.energy_cost_breakdown) {
+                                    delete data.energy_cost_breakdown.card;
+                                }
+                                if (data && data.charging_tips) {
+                                    delete data.charging_tips;
+                                }
+                            }
+                            if (element.path.includes('lifetime')) {
+                                for (const serie of data.time_series) {
+                                    if (!data.total) {
+                                        data.total = JSON.parse(JSON.stringify(serie));
+                                    } else {
+                                        for (const key in serie) {
+                                            if (typeof serie[key] === 'number') {
+                                                data.total[key] += serie[key];
+                                            } else {
+                                                data.total[key] = serie[key];
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (element.path.includes('energy_history')) {
+                                const totals = {};
+                                for (const serie of data.time_series) {
+                                    let date = serie.timestamp.split('T')[0];
+                                    if (element.path.includes('lifetime')) {
+                                        date = serie.timestamp.slice(0, 4);
+                                    }
+                                    if (!totals[date]) {
+                                        totals[date] = JSON.parse(JSON.stringify(serie));
+                                    } else {
+                                        for (const key in serie) {
+                                            if (typeof serie[key] === 'number') {
+                                                totals[date][key] += serie[key];
+                                            } else {
+                                                totals[date][key] = serie[key];
+                                            }
+                                        }
+                                    }
+                                }
+                                const totalArray = [];
+                                for (const key in totals) {
+                                    totalArray.push(totals[key]);
+                                }
+                                data.time_series = totalArray;
+                            }
+                            if (element.path.includes('history')) {
+                                forceIndex = true;
+                            }
+
+                            this.json2iob.parse(this.id2vin[id] + element.path, data, {
+                                preferedArrayName: preferedArrayName,
+                                forceIndex: forceIndex,
+                            });
+                            if (data && data.drive_state) {
+                                if (data.drive_state.shift_state && this.config.intervalDrive > 0) {
+                                    if (!this.updateIntervalDrive[id]) {
+                                        this.updateIntervalDrive[id] = setInterval(async () => {
+                                            this.updateDrive(id);
+                                        }, this.config.intervalDrive * 1000);
+                                    }
+                                } else {
+                                    if (this.updateIntervalDrive[id]) {
+                                        clearInterval(this.updateIntervalDrive[id]);
+                                        this.updateIntervalDrive[id] = null;
+                                    }
+                                }
+                            }
+                        }).catch((error) => {
+                            this.log.error(url);
+                            this.log.error(error);
+                            error.response && this.log.error(JSON.stringify(error.response.data));
+                        });
+
+                        return;
+                    }
+
+                    if (error.response && (error.response.status >= 500 || error.response.status === 408)) {
+                        this.log.debug(url);
+                        this.log.debug(error);
+                        error.response && this.log.debug(JSON.stringify(error.response.data));
+                        return;
+                    }
+                    if (error.response && error.response.status === 429) {
+                        const retryAfterSeconds = parseInt(error.response.headers['retry-after'], 10);
+                        this.retryAfter[id] = Date.now() + retryAfterSeconds * 1000;
+                        this.minInterval = Math.min(this.minInterval + 5000, retryAfterSeconds * 1000); // Erhöhe das Intervall um 5 Sekunden
+                        this.log.warn(`Rate limit exceeded for ${id}. Retry after ${retryAfterSeconds} seconds. Increasing min interval to ${this.minInterval / 1000} seconds.`);
+                        return;
+                    }
+                    this.log.error('General error');
+                    this.log.error(url);
+                    this.log.error(error);
+                    error.response && this.log.error(JSON.stringify(error.response.data));
+                });
+        }
+    }
+}
+
+async updateDrive(id) {
+  const headers = {
       'Content-Type': 'application/json; charset=utf-8',
       Accept: '*/*',
       Authorization: 'Bearer ' + this.session.access_token,
-    };
+  };
 
-    this.idArray.forEach(async (product) => {
-      const id = product.id;
-      let currentArray;
-      const energy_site_id = product.energy_site_id;
-      if (product.type === 'vehicle') {
-        let state = await this.checkState(id);
-        this.log.debug(id + ': ' + state);
-        if (state === 'asleep' && !this.config.wakeup) {
-          this.log.debug(id + ' asleep skip update');
-          this.lastStates[id] = state;
-          return;
-        }
-        let waitForSleep = false;
-        if (this.lastStates[id] && this.lastStates[id] !== 'asleep' && forceUpdate !== true) {
-          waitForSleep = await this.checkWaitForSleepState(product.vin);
-        } else {
-          if (forceUpdate) {
-            this.log.debug('Skip wait because force update');
-          } else {
-            this.log.debug('Skip wait because last state was asleep');
-          }
-        }
-        this.lastStates[id] = state;
+  const apiUrl = this.config.useNewApi
+      ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state'
+      : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state';
 
-        if (waitForSleep && !this.config.wakeup) {
-          if (!this.sleepTimes[id]) {
-            this.sleepTimes[id] = Date.now();
-            if (this.ws) {
-              this.ws.close();
-            }
-          }
-          if (Date.now() - this.sleepTimes[id] >= 900000) {
-            this.log.debug(id + ' wait for sleep was not successful');
-            this.sleepTimes[id] = null;
-          } else {
-            this.log.debug(id + ' skip update. Waiting for sleep');
-            return;
-          }
-        }
+  await this.requestClient({
+      method: 'get',
+      url: apiUrl,
+      headers: headers,
+  })
+      .then((res) => {
+          this.log.debug(JSON.stringify(res.data));
 
-        if (this.config.wakeup && state !== 'online') {
-          while (state !== 'online') {
-            let errorButNotTimeout = false;
-
-            const vehicleState = await this.sendCommand(id, 'wake_up').catch((error) => {
-              if (error.response && error.response.status !== 408 && error.response.status !== 503) {
-                errorButNotTimeout = true;
-              }
-            });
-            if (errorButNotTimeout || !vehicleState) {
-              break;
-            }
-            state = vehicleState.state;
-            await this.sleep(10000);
-          }
-        }
-        currentArray = vehicleStatusArray;
-
-        if (this.config.streaming) {
-          this.connectToWS(product.vehicle_id, product.id);
-        }
-      } else if (product.type === 'wall_connector') {
-        currentArray = wallboxArray;
-      } else {
-        currentArray = powerwallArray;
-      }
-      this.log.debug(`Update ${id} with array: ${JSON.stringify(currentArray)}`);
-      for (const element of currentArray) {
-        const exlucdeList = this.config.excludeElementList.replace(/\s/g, '').split(',');
-        if (element.path && exlucdeList.includes(element.path.replace('.', ''))) {
-          this.log.info('Skip path ' + element.path);
-          continue;
-        }
-        let url = element.url.replace('{id}', id);
-        url = url.replace('{energy_site_id}', energy_site_id);
-        this.log.debug(url);
-
-        if (element.path === '.charge_history') {
-          const diff = 60 * 60 * 1000;
-          if (!this.lastChargeHistory || Date.now() - this.lastChargeHistory > diff) {
-            this.lastChargeHistory = Date.now();
-          } else {
-            this.log.debug('Skip charge history because last update was less than 1h ago');
-            return;
-          }
-        }
-
-        // Check if rate limit applies
-        if (this.retryAfter[id] && Date.now() < this.retryAfter[id]) {
-          this.log.debug(`Skip update for ${id} due to rate limit. Retry after ${new Date(this.retryAfter[id]).toLocaleTimeString()}`);
-          continue;
-        }
-
-        await this.requestClient({
-          method: element.method || 'GET',
-          url: url,
-          headers: headers,
-          params: this.config.useNewApi
-            ? {
-                vin: this.id2vin[id],
-           //     sortBy: 'timestamp',
-                sortOrder: 'ASC',
-              }
-            : {},
-        })
-          .then((res) => {
-            this.log.debug(JSON.stringify(res.data));
-
-            if (!res.data) {
+          if (!res.data) {
               return;
-            }
-            if (res.data.response && res.data.response.tokens) {
+          }
+          if (res.data.response && res.data.response.tokens) {
               delete res.data.response.tokens;
-            }
-            const data = res.data.response;
-            let preferedArrayName = 'timestamp';
-            let forceIndex = false;
-            if (element.path === '.charge_history') {
-              preferedArrayName = 'title';
-              if (data && data.charging_history_graph) {
-                delete data.charging_history_graph.y_labels;
-                delete data.charging_history_graph.x_labels;
-              }
-              if (data && data.gas_savings) {
-                delete data.gas_savings.card;
-              }
-              if (data && data.energy_cost_breakdown) {
-                delete data.energy_cost_breakdown.card;
-              }
-              if (data && data.charging_tips) {
-                delete data.charging_tips;
-              }
-            }
-            if (element.path.includes('lifetime')) {
-              for (const serie of data.time_series) {
-                if (!data.total) {
-                  data.total = JSON.parse(JSON.stringify(serie));
-                } else {
-                  for (const key in serie) {
-                    if (typeof serie[key] === 'number') {
-                      data.total[key] += serie[key];
-                    } else {
-                      data.total[key] = serie[key];
-                    }
-                  }
-                }
-              }
-            }
-            if (element.path.includes('energy_history')) {
-              const totals = {};
-              for (const serie of data.time_series) {
-                let date = serie.timestamp.split('T')[0];
-                if (element.path.includes('lifetime')) {
-                  date = serie.timestamp.slice(0, 4);
-                }
-                if (!totals[date]) {
-                  totals[date] = JSON.parse(JSON.stringify(serie));
-                } else {
-                  for (const key in serie) {
-                    if (typeof serie[key] === 'number') {
-                      totals[date][key] += serie[key];
-                    } else {
-                      totals[date][key] = serie[key];
-                    }
-                  }
-                }
-              }
-              const totalArray = [];
-              for (const key in totals) {
-                totalArray.push(totals[key]);
-              }
-              data.time_series = totalArray;
-            }
-            if (element.path.includes('history')) {
-              forceIndex = true;
-            }
+          }
+          const data = res.data.response;
 
-            this.json2iob.parse(this.id2vin[id] + element.path, data, {
-              preferedArrayName: preferedArrayName,
-              forceIndex: forceIndex,
-            });
-            if (data && data.drive_state) {
-              if (data.drive_state.shift_state && this.config.intervalDrive > 0) {
-                if (!this.updateIntervalDrive[id]) {
-                  this.updateIntervalDrive[id] = setInterval(async () => {
-                    this.updateDrive(id);
-                  }, this.config.intervalDrive * 1000);
-                }
-              } else {
-                if (this.updateIntervalDrive[id]) {
-                  clearInterval(this.updateIntervalDrive[id]);
-                  this.updateIntervalDrive[id] = null;
-                }
-              }
-            }
-          })
-          .catch((error) => {
-            if (error.response && error.response.status === 401) {
-              error.response && this.log.error(JSON.stringify(error.response.data));
-              this.log.info(element.path + ' receive 401 error. Refresh Token');
+          this.json2iob.parse(this.id2vin[id], data);
+      })
+      .catch(async (error) => {
+          if (error.response && error.response.status === 401) {
+              this.log.info('Update drive receive 401 error. Refresh Token');
               await this.refreshToken();
 
               // Retry the request after refreshing the token
               await this.requestClient({
-                method: element.method || 'GET',
-                url: url,
-                headers: {
-                  ...headers,
-                  Authorization: 'Bearer ' + this.session.access_token,
-                },
-                params: this.config.useNewApi
-                  ? {
-                      vin: this.id2vin[id],
-                      sortOrder: 'ASC',
-                    }
-                  : {},
+                  method: 'get',
+                  url: apiUrl,
+                  headers: {
+                      ...headers,
+                      Authorization: 'Bearer ' + this.session.access_token,
+                  },
               }).then((res) => {
-                this.log.debug(JSON.stringify(res.data));
+                  this.log.debug(JSON.stringify(res.data));
 
-                if (!res.data) {
-                  return;
-                }
-                if (res.data.response && res.data.response.tokens) {
-                  delete res.data.response.tokens;
-                }
-                const data = res.data.response;
-                let preferedArrayName = 'timestamp';
-                let forceIndex = false;
-                if (element.path === '.charge_history') {
-                  preferedArrayName = 'title';
-                  if (data && data.charging_history_graph) {
-                    delete data.charging_history_graph.y_labels;
-                    delete data.charging_history_graph.x_labels;
+                  if (!res.data) {
+                      return;
                   }
-                  if (data && data.gas_savings) {
-                    delete data.gas_savings.card;
+                  if (res.data.response && res.data.response.tokens) {
+                      delete res.data.response.tokens;
                   }
-                  if (data && data.energy_cost_breakdown) {
-                    delete data.energy_cost_breakdown.card;
-                  }
-                  if (data && data.charging_tips) {
-                    delete data.charging_tips;
-                  }
-                }
-                if (element.path.includes('lifetime')) {
-                  for (const serie of data.time_series) {
-                    if (!data.total) {
-                      data.total = JSON.parse(JSON.stringify(serie));
-                    } else {
-                      for (const key in serie) {
-                        if (typeof serie[key] === 'number') {
-                          data.total[key] += serie[key];
-                        } else {
-                          data.total[key] = serie[key];
-                        }
-                      }
-                    }
-                  }
-                }
-                if (element.path.includes('energy_history')) {
-                  const totals = {};
-                  for (const serie of data.time_series) {
-                    let date = serie.timestamp.split('T')[0];
-                    if (element.path.includes('lifetime')) {
-                      date = serie.timestamp.slice(0, 4);
-                    }
-                    if (!totals[date]) {
-                      totals[date] = JSON.parse(JSON.stringify(serie));
-                    } else {
-                      for (const key in serie) {
-                        if (typeof serie[key] === 'number') {
-                          totals[date][key] += serie[key];
-                        } else {
-                          totals[date][key] = serie[key];
-                        }
-                      }
-                    }
-                  }
-                  const totalArray = [];
-                  for (const key in totals) {
-                    totalArray.push(totals[key]);
-                  }
-                  data.time_series = totalArray;
-                }
-                if (element.path.includes('history')) {
-                  forceIndex = true;
-                }
+                  const data = res.data.response;
 
-                this.json2iob.parse(this.id2vin[id] + element.path, data, {
-                  preferedArrayName: preferedArrayName,
-                  forceIndex: forceIndex,
-                });
-                if (data && data.drive_state) {
-                  if (data.drive_state.shift_state && this.config.intervalDrive > 0) {
-                    if (!this.updateIntervalDrive[id]) {
-                      this.updateIntervalDrive[id] = setInterval(async () => {
-                        this.updateDrive(id);
-                      }, this.config.intervalDrive * 1000);
-                    }
-                  } else {
-                    if (this.updateIntervalDrive[id]) {
-                      clearInterval(this.updateIntervalDrive[id]);
-                      this.updateIntervalDrive[id] = null;
-                    }
-                  }
-                }
+                  this.json2iob.parse(this.id2vin[id], data);
               }).catch((error) => {
-                this.log.error(url);
-                this.log.error(error);
-                error.response && this.log.error(JSON.stringify(error.response.data));
+                  this.log.error(apiUrl);
+                  this.log.error(error);
+                  error.response && this.log.error(JSON.stringify(error.response.data));
               });
 
               return;
-            }
-
-            if (error.response && (error.response.status >= 500 || error.response.status === 408)) {
-              this.log.debug(url);
+          }
+          if (error.response && (error.response.status >= 500 || error.response.status === 408)) {
               this.log.debug(error);
               error.response && this.log.debug(JSON.stringify(error.response.data));
               return;
-            }
-            if (error.response && error.response.status === 429) {
-              const retryAfterSeconds = parseInt(error.response.headers['retry-after'], 10);
-              this.retryAfter[id] = Date.now() + retryAfterSeconds * 1000;
-              this.minInterval = Math.min(this.minInterval + 5000, retryAfterSeconds * 1000); // Erhöhe das Intervall um 5 Sekunden
-              this.log.warn(`Rate limit exceeded for ${id}. Retry after ${retryAfterSeconds} seconds. Increasing min interval to ${this.minInterval / 1000} seconds.`);
-              return;
-            }
-            this.log.error('General error');
-            this.log.error(url);
-            this.log.error(error);
-            error.response && this.log.error(JSON.stringify(error.response.data));
-          });
-      }
-    });
-  }
+          }
 
-  async updateDrive(id) {
-    const headers = {
-      'Content-Type': 'application/json; charset=utf-8',
-      Accept: '*/*',
-      Authorization: 'Bearer ' + this.session.access_token,
-    };
-  
-    const apiUrl = this.config.useNewApi
-      ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state'
-      : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id + '/vehicle_data?endpoints=drive_state';
-  
-    await this.requestClient({
-      method: 'get',
-      url: apiUrl,
-      headers: headers,
-    })
-      .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
-  
-        if (!res.data) {
-          return;
-        }
-        if (res.data.response && res.data.response.tokens) {
-          delete res.data.response.tokens;
-        }
-        const data = res.data.response;
-  
-        this.json2iob.parse(this.id2vin[id], data);
-      })
-      .catch(async (error) => {
-        if (error.response && error.response.status === 401) {
-          this.log.info('Update drive receive 401 error. Refresh Token');
-          await this.refreshToken();
-  
-          // Retry the request after refreshing the token
-          await this.requestClient({
-            method: 'get',
-            url: apiUrl,
-            headers: {
-              ...headers,
-              Authorization: 'Bearer ' + this.session.access_token,
-            },
-          }).then((res) => {
-            this.log.debug(JSON.stringify(res.data));
-  
-            if (!res.data) {
-              return;
-            }
-            if (res.data.response && res.data.response.tokens) {
-              delete res.data.response.tokens;
-            }
-            const data = res.data.response;
-  
-            this.json2iob.parse(this.id2vin[id], data);
-          }).catch((error) => {
-            this.log.error(apiUrl);
-            this.log.error(error);
-            error.response && this.log.error(JSON.stringify(error.response.data));
-          });
-  
-          return;
-        }
-        if (error.response && (error.response.status >= 500 || error.response.status === 408)) {
-          this.log.debug(error);
-          error.response && this.log.debug(JSON.stringify(error.response.data));
-          return;
-        }
-  
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+          this.log.error(error);
+          error.response && this.log.error(JSON.stringify(error.response.data));
       });
-  }
+}
   
-  async checkState(id) {
-    const headers = {
+async checkState(id) {
+  const headers = {
       'Content-Type': 'application/json; charset=utf-8',
       Accept: '*/*',
       Authorization: 'Bearer ' + this.session.access_token,
-    };
-  
-    const apiUrl = this.config.useNewApi
+  };
+
+  const apiUrl = this.config.useNewApi
       ? 'https://fleet-api.prd.eu.vn.cloud.tesla.com/api/1/vehicles/' + id
       : 'https://owner-api.teslamotors.com/api/1/vehicles/' + id;
-  
-    return await this.requestClient({
+
+  return await this.requestClient({
       method: 'get',
       url: apiUrl,
       headers: headers,
-    })
+  })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
-        if (res.data.response && res.data.response.tokens) {
-          delete res.data.response.tokens;
-        }
-        this.json2iob.parse(this.id2vin[id], res.data.response, { preferedArrayName: 'timestamp' });
-        return res.data.response.state;
+          this.log.debug(JSON.stringify(res.data));
+          if (res.data.response && res.data.response.tokens) {
+              delete res.data.response.tokens;
+          }
+          this.json2iob.parse(this.id2vin[id], res.data.response, { preferedArrayName: 'timestamp' });
+          return res.data.response.state;
       })
       .catch(async (error) => {
-        if (error.response && error.response.status === 401) {
-          this.log.info('Check state receive 401 error. Refresh Token');
-          await this.refreshToken();
-  
-          // Retry the request after refreshing the token
-          return await this.requestClient({
-            method: 'get',
-            url: apiUrl,
-            headers: {
-              ...headers,
-              Authorization: 'Bearer ' + this.session.access_token,
-            },
-          }).then((res) => {
-            this.log.debug(JSON.stringify(res.data));
-            if (res.data.response && res.data.response.tokens) {
-              delete res.data.response.tokens;
-            }
-            this.json2iob.parse(this.id2vin[id], res.data.response, { preferedArrayName: 'timestamp' });
-            return res.data.response.state;
-          }).catch((error) => {
-            this.log.error(apiUrl);
-            this.log.error(error);
-            error.response && this.log.error(JSON.stringify(error.response.data));
-          });
-        }
-        if (error.response && error.response.status === 404) {
+          if (error.response && error.response.status === 401) {
+              this.log.info('Check state receive 401 error. Refresh Token');
+              await this.refreshToken();
+
+              // Retry the request after refreshing the token
+              return await this.requestClient({
+                  method: 'get',
+                  url: apiUrl,
+                  headers: {
+                      ...headers,
+                      Authorization: 'Bearer ' + this.session.access_token,
+                  },
+              }).then((res) => {
+                  this.log.debug(JSON.stringify(res.data));
+                  if (res.data.response && res.data.response.tokens) {
+                      delete res.data.response.tokens;
+                  }
+                  this.json2iob.parse(this.id2vin[id], res.data.response, { preferedArrayName: 'timestamp' });
+                  return res.data.response.state;
+              }).catch((error) => {
+                  this.log.error(apiUrl);
+                  this.log.error(error);
+                  error.response && this.log.error(JSON.stringify(error.response.data));
+              });
+          }
+          if (error.response && error.response.status === 404) {
+              return;
+          }
+          if (error.response && (error.response.status >= 500 || error.response.status === 408)) {
+              this.log.debug(error);
+              error.response && this.log.debug(JSON.stringify(error.response.data));
+              return;
+          }
+          this.log.error(error);
+          error.response && this.log.error(JSON.stringify(error.response.data));
           return;
-        }
-        if (error.response && (error.response.status >= 500 || error.response.status === 408)) {
-          this.log.debug(error);
-          error.response && this.log.debug(JSON.stringify(error.response.data));
-          return;
-        }
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
-        return;
       });
-  }
+}
   
   async refreshToken(firstStart) {
     const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
