@@ -895,8 +895,6 @@ async refreshToken(firstStart) {
       refresh_token: this.session.refresh_token,
   });
 
-  this.log.debug("Refresh Token benutzt : " + this.session.refresh_token + "Client_ID" + this.session.client_id);
-
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
   await this.requestClient({
@@ -913,6 +911,15 @@ async refreshToken(firstStart) {
           // Aktualisiere die gespeicherten Tokens
           this.tempTokens.accessToken = res.data.access_token;
           this.tempTokens.refreshToken = res.data.refresh_token;
+
+          // Speichere die aktualisierten Tokens im Adapter
+          const obj = await this.getForeignObjectAsync(this.adapterConfig);
+          if (obj) {
+              obj.native.session = this.session;
+              obj.native.accessToken = this.tempTokens.accessToken;
+              obj.native.refreshToken = this.tempTokens.refreshToken;
+              await this.setForeignObjectAsync(this.adapterConfig, obj);
+          }
 
           this.setState('info.connection', true, true);
           return res.data;
@@ -1280,33 +1287,35 @@ async refreshToken(firstStart) {
 
   async onUnload(callback) {
     try {
-      this.setState('info.connection', false, true);
+        this.setState('info.connection', false, true);
   
-      if (this.ws) {
-        this.ws.close();
-      }
-      Object.keys(this.updateIntervalDrive).forEach((element) => {
-        clearInterval(this.updateIntervalDrive[element]);
-      });
-      this.updateInterval && clearInterval(this.updateInterval);
-      this.refreshTimeout && clearTimeout(this.refreshTimeout);
-      this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
-      this.locationInterval && clearInterval(this.locationInterval);
-      this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
-      const obj = await this.getForeignObjectAsync(this.adapterConfig);
-      this.log.info('Save login session');
-      if (obj) {
-        obj.native.session = this.session;
-        obj.native.accessToken = this.tempTokens.accessToken || this.config.accessToken; // Speichern der temporären Tokens
-        obj.native.refreshToken = this.tempTokens.refreshToken || this.config.refreshToken; // Speichern der temporären Tokens
-        this.log.debug('Session saved');
-        await this.setForeignObjectAsync(this.adapterConfig, obj);
-      }
-      callback();
+        if (this.ws) {
+            this.ws.close();
+        }
+        Object.keys(this.updateIntervalDrive).forEach((element) => {
+            clearInterval(this.updateIntervalDrive[element]);
+        });
+        this.updateInterval && clearInterval(this.updateInterval);
+        this.refreshTimeout && clearTimeout(this.refreshTimeout);
+        this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
+        this.locationInterval && clearInterval(this.locationInterval);
+        this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
+
+        // Aktualisiere gespeicherte Tokens vor dem Unload
+        const obj = await this.getForeignObjectAsync(this.adapterConfig);
+        if (obj) {
+            obj.native.session = this.session;
+            obj.native.accessToken = this.tempTokens.accessToken || this.config.accessToken;
+            obj.native.refreshToken = this.tempTokens.refreshToken || this.config.refreshToken;
+            this.log.debug('Session saved');
+            await this.setForeignObjectAsync(this.adapterConfig, obj);
+        }
+
+        callback();
     } catch (e) {
-      callback();
+        callback();
     }
-  }
+}
   
   async onStateChange(id, state) {
     if (state) {
