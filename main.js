@@ -40,41 +40,45 @@ class Teslamotors extends utils.Adapter {
   async onReady() {
     this.setState('info.connection', false, true);
     if (this.config.intervalNormal < 25) {
-      this.log.info('Set interval to minimum 25 seconds');
-      this.config.intervalNormal = 25;
+        this.log.info('Set interval to minimum 25 seconds');
+        this.config.intervalNormal = 25;
     }
     this.adapterConfig = 'system.adapter.' + this.name + '.' + this.instance;
     const obj = await this.getForeignObjectAsync(this.adapterConfig);
     if (this.config.reset) {
-      if (obj) {
-        obj.native.session = {};
-        obj.native.cookies = '';
-        obj.native.captchaSvg = '';
-        obj.native.reset = false;
-        obj.native.captcha = '';
-        obj.native.codeUrl = '';
-        obj.native.partnerAuthToken = '';
-        obj.native.refreshToken = '';
-        obj.native.accessToken = '';
-        obj.native.vehicleId = '';
-        obj.native.id = '';
-        obj.native.clientId = '';
-        obj.native.clientSecret = '';
-        obj.native.domain = '';
-        obj.native.region = '';
-        obj.native.redirectUri = '';
-        obj.native.teslaApiProxyUrl = '';
-        await this.setForeignObjectAsync(this.adapterConfig, obj);
-        this.log.info('Login Token resetted');
-        this.terminate();
-      }
+        if (obj) {
+            obj.native.session = {};
+            obj.native.cookies = '';
+            obj.native.captchaSvg = '';
+            obj.native.reset = false;
+            obj.native.captcha = '';
+            obj.native.codeUrl = '';
+            obj.native.partnerAuthToken = '';
+            obj.native.refreshToken = '';
+            obj.native.accessToken = '';
+            obj.native.vehicleId = '';
+            obj.native.id = '';
+            obj.native.clientId = '';
+            obj.native.clientSecret = '';
+            obj.native.domain = '';
+            obj.native.region = '';
+            obj.native.redirectUri = '';
+            obj.native.teslaApiProxyUrl = '';
+            await this.setForeignObjectAsync(this.adapterConfig, obj);
+            this.log.info('Login Token resetted');
+            this.terminate();
+        }
     }
 
     if (obj && obj.native.session && obj.native.session.refresh_token) {
-      this.session = obj.native.session;
-      this.log.info('Session loaded');
-      this.log.info('Refresh session');
-      await this.refreshToken(true);
+        this.session = obj.native.session;
+        this.log.info('Session loaded');
+        this.log.info('Refresh session');
+        await this.refreshToken(true);
+    } else if (this.config.refreshToken) {
+        this.session.refresh_token = this.config.refreshToken; // Lade den Token aus der Konfiguration
+        this.log.info('Initial session setup with config token');
+        await this.refreshToken(true);
     }
 
     this.updateInterval = null;
@@ -83,41 +87,41 @@ class Teslamotors extends utils.Adapter {
 
     this.subscribeStates('*');
     this.headers = {
-      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
-      'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
-      'accept-language': 'de-de',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'x-tesla-user-agent': 'TeslaApp/4.7.0-910/fde17d58a/ios/14.8',
+        'user-agent': 'Tesla/4.7.0 (com.teslamotors.TeslaApp; build:910; iOS 14.8.0) Alamofire/5.2.1',
+        'accept-language': 'de-de',
     };
     if (!this.config.useNewApi && !this.session.access_token) {
-      this.log.info('Initial login');
-      await this.login();
+        this.log.info('Initial login');
+        await this.login();
     }
     if (this.config.useNewApi) {
-      this.session.access_token = this.config.accessToken;
+        this.session.access_token = this.config.accessToken;
     }
     if (this.session.access_token) {
-      this.log.info('Receive device list');
-      await this.getDeviceList();
-      this.updateDevices();
-      this.updateInterval = setInterval(async () => {
-        await this.updateDevices();
-      }, this.config.intervalNormal * 1000);
-      if (this.config.locationInterval > 10) {
-        this.updateDevices(false, true);
-        this.locationInterval = setInterval(async () => {
-          await this.updateDevices(false, true);
-        }, this.config.locationInterval * 1000);
-      } else {
-        this.log.info('Location interval is less than 10s. Skip location update');
-      }
-      if (!this.config.useNewApi) {
-        const intervalTime = this.session.expires_in ? (this.session.expires_in - 200) * 1000 : 3000 * 1000;
-        this.refreshTokenInterval = setInterval(() => {
-          this.refreshToken();
-        }, intervalTime);
-      }
+        this.log.info('Receive device list');
+        await this.getDeviceList();
+        this.updateDevices();
+        this.updateInterval = setInterval(async () => {
+            await this.updateDevices();
+        }, this.config.intervalNormal * 1000);
+        if (this.config.locationInterval > 10) {
+            this.updateDevices(false, true);
+            this.locationInterval = setInterval(async () => {
+                await this.updateDevices(false, true);
+            }, this.config.locationInterval * 1000);
+        } else {
+            this.log.info('Location interval is less than 10s. Skip location update');
+        }
+        if (!this.config.useNewApi) {
+            const intervalTime = this.session.expires_in ? (this.session.expires_in - 200) * 1000 : 3000 * 1000;
+            this.refreshTokenInterval = setInterval(() => {
+                this.refreshToken();
+            }, intervalTime);
+        }
     }
-  }
+}
 
   async login() {
     if (!this.config.codeUrl) {
