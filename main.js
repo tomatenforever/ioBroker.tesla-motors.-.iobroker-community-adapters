@@ -74,6 +74,7 @@ class Teslamotors extends utils.Adapter {
         this.session = obj.native.session;
         this.log.info('Session loaded');
         this.log.info('Refresh session');
+        this.session.refresh_token = this.config.refreshToken;
         await this.refreshToken(true);
     } else if (this.config.refreshToken) {
         this.session.refresh_token = this.config.refreshToken; // Lade den Token aus der Konfiguration
