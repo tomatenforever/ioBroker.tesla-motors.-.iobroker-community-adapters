@@ -888,18 +888,14 @@ async checkState(id) {
   
 async refreshToken(firstStart) {
   const apiUrl = 'https://auth.tesla.com/oauth2/v3/token';
-  if (this.tempTokens == "") {
-  this.tempTokens.refreshToken = this.config.refresh_token;
-  console.log("Aktualisiere Temp Token mit : " + this.config.refresh_token);
-  } 
   const data = qs.stringify({
       grant_type: 'refresh_token',
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,
-      refresh_token: this.tempTokens.refreshToken,
+      refresh_token: this.config.refresh_token,
   });
 
-  console.log(data);
+  console.log("Refresh Token benutzt : " + this.config.refresh_token);
 
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
