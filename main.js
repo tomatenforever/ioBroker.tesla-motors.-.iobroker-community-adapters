@@ -1311,8 +1311,15 @@ async refreshToken(firstStart) {
         const obj = await this.getForeignObjectAsync(this.adapterConfig);
         if (obj) {
             obj.native.session = this.session;
-            obj.native.accessToken = this.tempTokens.accessToken || this.config.accessToken;
-            obj.native.refreshToken = this.tempTokens.refreshToken || this.config.refreshToken;
+            if (this.tempTokens.accessToken && this.tempTokens.refreshToken) {
+              obj.native.accessToken = this.tempTokens.accessToken;
+              obj.native.refreshToken = this.tempTokens.refreshToken;
+          } else {
+              // Wenn die temporären Tokens nicht gesetzt sind, verwenden Sie die aus der Konfiguration
+              this.log.warn('Temp tokens are not set, using config tokens');
+              obj.native.accessToken = this.session.access_token;
+              obj.native.refreshToken = this.session.refresh_token;;
+          }
             this.log.debug('Session saved');
             await this.setForeignObjectAsync(this.adapterConfig, obj);
         }
